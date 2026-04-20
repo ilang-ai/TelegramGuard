@@ -1,0 +1,21 @@
+name: Sync to HuggingFace Datasets
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to HuggingFace Datasets
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git remote add hf-datasets https://i-Lang:${HF_TOKEN}@huggingface.co/datasets/i-Lang/TelegramGuard || true
+          git push hf-datasets main --force
