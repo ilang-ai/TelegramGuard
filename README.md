@@ -1,3 +1,12 @@
+---
+license: mit
+tags:
+  - telegram
+  - anti-spam
+  - ilang
+  - chatbot
+---
+
 # I-Lang Guard
 
 AI-powered Telegram group guardian. Anti-spam, vision, chat — all driven by [I-Lang Prompt Spec](https://github.com/ilang-ai/ilang-spec).
