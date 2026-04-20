@@ -461,6 +461,24 @@ def main():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init_db())
 
+    # Startup test: verify Gemini API works
+    async def _test_ai():
+        try:
+            from modules.chat import model, _safe_text
+            r = await model.generate_content_async("Say hello in one word. JSON: {\"intent\":\"chat\",\"reply\":\"your word\"}")
+            text = _safe_text(r)
+            if text:
+                logger.info("AI startup test OK: " + text[:100])
+            else:
+                logger.error("AI startup test FAILED: empty response")
+                if hasattr(r, 'prompt_feedback'):
+                    logger.error("Feedback: " + str(r.prompt_feedback))
+                if hasattr(r, 'candidates') and r.candidates:
+                    logger.error("Candidates: " + str(r.candidates))
+        except Exception as e:
+            logger.error("AI startup test EXCEPTION: " + str(e))
+    loop.run_until_complete(_test_ai())
+
     logger.info("I-Lang Guard starting...")
     app.run_polling(
         drop_pending_updates=True,
