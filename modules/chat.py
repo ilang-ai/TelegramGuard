@@ -31,10 +31,10 @@ ANTISPAM_TEXT_PROMPT = _load_prompt("antispam.ilang")
 VISION_PROMPT = _load_prompt("vision.ilang")
 
 GROUP_WELCOME = (
-    "I-Lang Guard 来了\n\n"
-    "垃圾广告我来清理, 全自动, 不用配置\n"
-    "有问题可以 @我\n\n"
-    "给我管理员权限(删消息+封人)就行, 其他不用管"
+    "I-Lang Guard is here\n\n"
+    "I auto-clean spam. No config needed.\n"
+    "@ me if you need anything.\n\n"
+    "Just give me admin permissions (delete messages + ban users)."
 )
 
 model = genai.GenerativeModel(
@@ -92,9 +92,9 @@ def _ctx(history, info):
 
 def _deflect():
     lines = [
-        "这个话题不太方便聊, 换一个吧",
-        "换个话题? 你今天有什么需要帮忙的?",
-        "这个超纲了, 聊点别的吧",
+        "That's a tough one. What else can I help with?",
+        "Let's try a different angle. What do you need today?",
+        "That's beyond my range. What else is on your mind?",
     ]
     return random.choice(lines)
 
@@ -126,7 +126,7 @@ async def ai_vision(image_bytes, caption="", history=None, context_info=""):
         return _parse(r.text if r.text else "")
     except Exception as e:
         logger.warning("AI vision: " + str(e))
-        return ("chat", None, "图片没看清, 再发一张?")
+        return ("chat", None, "Couldn't read that image. Try another one?")
 
 
 async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_info=""):
@@ -137,12 +137,12 @@ async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_inf
         return _parse(r.text if r.text else "")
     except Exception as e:
         logger.warning("AI voice: " + str(e))
-        return ("chat", None, "语音没听清, 再说一次或者打字都行")
+        return ("chat", None, "Didn't catch that. Try again or type it out.")
 
 
 async def ai_judge_group_message(text):
     try:
-        prompt = ANTISPAM_TEXT_PROMPT + "\n\n消息内容: " + text[:1000]
+        prompt = ANTISPAM_TEXT_PROMPT + "\n\nMessage content: " + text[:1000]
         r = await vision_model.generate_content_async(prompt)
         result = r.text.strip().lower() if r.text else "ok"
         return "spam" in result
@@ -152,7 +152,7 @@ async def ai_judge_group_message(text):
 
 async def ai_judge_group_image(image_bytes, caption=""):
     try:
-        prompt = ANTISPAM_TEXT_PROMPT + "\n\n判断这张图片是否是spam。只回复 spam 或 ok。"
+        prompt = ANTISPAM_TEXT_PROMPT + "\n\nJudge this image. Reply ONLY: spam or ok."
         if caption:
             prompt += "\nCaption: " + caption[:500]
         r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
@@ -164,12 +164,12 @@ async def ai_judge_group_image(image_bytes, caption=""):
 
 async def ai_group_vision(image_bytes, caption="", history=None):
     try:
-        ctx = _ctx(history, "GROUP_CHAT: 用户在群里发了张图片@你, 简短评论1-2句话")
+        ctx = _ctx(history, "GROUP_CHAT: User shared an image and @mentioned you. Comment naturally in 1-2 sentences.")
         prompt = SYSTEM_PROMPT + "\n" + ctx
         if caption:
             prompt += "\nuser: " + caption
         else:
-            prompt += "\nuser: [发了张图片]"
+            prompt += "\nuser: [shared an image]"
         r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
         raw = r.text.strip() if r.text else ""
         if not raw:
@@ -184,7 +184,7 @@ async def ai_group_vision(image_bytes, caption="", history=None):
 
 async def ai_group_reply(text, history=None):
     try:
-        ctx = _ctx(history, "GROUP_CHAT: 你在群里被@了, 直接回答, 简短2句话")
+        ctx = _ctx(history, "GROUP_CHAT: You were @mentioned in a group. Reply directly, 1-2 sentences.")
         prompt = ctx + "\nuser: " + text
         r = await model.generate_content_async(prompt)
         raw = r.text.strip() if r.text else ""

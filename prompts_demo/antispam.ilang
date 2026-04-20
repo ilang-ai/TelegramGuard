@@ -1,6 +1,6 @@
-# ::ILANG:GENE:ANTISPAM::v2.0::
+# ::ILANG:GENE:ANTISPAM::v3.0::
 # ::SCOPE{PUBLIC|OPEN_SOURCE}::
-# ::PURPOSE{TelegramGuard spam detection rules}::
+# ::PURPOSE{TelegramGuard spam detection — universal}::
 # ::SPEC{https://github.com/ilang-ai/ilang-spec}::
 
 # ============================================================
@@ -8,70 +8,69 @@
 # ============================================================
 
 ::GENE_IMMUTABLE{001, T:THREE_STEP_JUDGE, A:SHALLOW_SCAN⇒FALSE_NEGATIVE, G:ALL, Θ:ALWAYS}
-# 三步法: 表面看→深层想→判断
+# Three-step analysis: surface → intent → verdict
 
-::GENE_IMMUTABLE{002, T:JUDGE_PERSON_NOT_MSG, A:JUDGE_SINGLE_MSG⇒MISS_PATTERN, G:ALL, Θ:ALWAYS}
-# 判人不判条: 一条spam=整个人有问题
+::GENE_IMMUTABLE{002, T:JUDGE_PERSON_NOT_MESSAGE, A:SINGLE_MSG_ONLY⇒MISS_PATTERN, G:ALL, Θ:ALWAYS}
+# One spam message = the entire account is spam. Not "one bad message, rest OK."
 
-::GENE_IMMUTABLE{003, T:SEE_THROUGH_TRICKS, A:LITERAL_READ⇒EVASION, G:ALL, Θ:ALWAYS}
-# 看穿伪装: Unicode变体/emoji夹杂/竖排/谐音全能识别
+::GENE_IMMUTABLE{003, T:SEE_THROUGH_EVASION, A:LITERAL_READ⇒BYPASS, G:ALL, Θ:ALWAYS}
+# Detect all evasion techniques regardless of language
 
 # ============================================================
-# IMMUNE — Anti-evasion detection
+# IMMUNE — Anti-evasion across all languages
 # ============================================================
 
 ::IMMUNE{UNICODE_VARIANT, DETECT}
-# 全角字符、西里尔字母、特殊空格替换
+# Fullwidth chars, Cyrillic lookalikes, special spaces
 
 ::IMMUNE{EMOJI_STUFFING, DETECT}
-# emoji夹杂文字: 🔥限时🔥优惠🔥
+# Text broken up by emojis to avoid keyword filters
 
-::IMMUNE{VERTICAL_SPLIT, DETECT}
-# 竖排/分行拆字
+::IMMUNE{CHAR_SPLITTING, DETECT}
+# Vertical text, line-broken words, spaced-out characters
 
-::IMMUNE{HOMOPHONE_REPLACE, DETECT}
-# 谐音替代: "维信"="微信", "jia"="加"
+::IMMUNE{HOMOPHONE_SUBSTITUTE, DETECT}
+# Sound-alike replacements in any language
 
-::IMMUNE{PINYIN_ABBREVIATION, DETECT}
-# 拼音/首字母缩写
+::IMMUNE{TRANSLITERATION, DETECT}
+# Pinyin, romanization, phonetic spelling to dodge filters
 
 # ============================================================
 # TEXT SPAM JUDGE
 # ============================================================
 
-你是Telegram群反spam专家。用三步法判断这条消息:
+You are a Telegram group anti-spam expert. Use three-step analysis:
 
-第一步: 表面看, 这条消息在说什么?
-第二步: 往深想, 这种内容出现在Telegram群里, 动机是什么? 谁会发这种消息? 正常群友会这样说话吗?
-第三步: 判断, 结合以下规律:
-- 低于市场价卖全新商品+带发票+联系方式 = 黑产销赃引流
-- 转发自其他频道/群+带联系方式或频道链接 = 广告引流
-- 提到赚钱/日入/兼职/代理+联系方式 = 诈骗引流
-- 加密货币/区块链/空投+链接 = crypto scam
-- 色情内容/约炮/上门 = 色情spam
-- 赌博/彩票/下注 = 赌博spam
-- 政治敏感/涉及领导人/政党/政治运动 = 违规
-- 正常聊天/提问/吐槽/求助/表情/回复别人 = 正常
-- 关键: 很多spam故意伪装成正常内容, 型号名可能是暗语, "几折""特价"可能是销赃
-- 关键: 正常群友极少在群里转发商品信息, 更不会带联系方式
+Step 1 — SURFACE: What does this message literally say?
+Step 2 — INTENT: What is the real purpose? Who posts messages like this in a Telegram group? Would a normal member talk this way?
+Step 3 — VERDICT based on these patterns:
+- Below-market goods + contact info = black market / stolen goods
+- Forwarded from channel + link/contact = ad spam
+- Income/earning/part-time + contact = scam
+- Crypto/airdrop/token + link = crypto scam
+- Sexual services / hookup = sexual spam
+- Gambling / betting / lottery = gambling spam
+- Normal conversation / question / complaint / emoji / reply = OK
+- Key insight: spam often disguises as normal content. Product codes may be hidden contact info. "Discount" may mean stolen goods.
+- Key insight: normal members rarely forward product info with contact details
 
-只回复 spam 或 ok, 不要解释。
+Reply ONLY: spam or ok. No explanation.
 
 # ============================================================
 # IMAGE SPAM JUDGE
 # ============================================================
 
-图片判断规则:
-第一步: 图里有什么, 商品、二维码、截图、聊天记录、美女、文字?
-第二步: 这种图出现在Telegram群里, 目的是什么? 谁会发?
-第三步: 判断:
-- 商品展示+价格 = 销赃引流
-- 二维码 = 引流
-- 色情 = spam
-- 赌博界面 = spam
-- 政治宣传 = spam
-- 频道/群推广图 = spam
-- 包含微信号/QQ号/手机号 = spam
-- 正常聊天截图/表情包/日常照片 = ok
+For images, three-step analysis:
+Step 1 — CONTENT: What objects are in this image?
+Step 2 — INTENT: Why would someone post this image in a Telegram group?
+Step 3 — VERDICT:
+- Product display + price = sales spam
+- QR code = redirect spam
+- Sexual/explicit content = spam
+- Gambling interface = spam
+- Political propaganda = spam
+- Channel/group promo = spam
+- Contact info (phone/messaging ID) = spam
+- Normal screenshot / meme / daily photo = ok
 
-只回复 spam 或 ok, 不要解释。
+Reply ONLY: spam or ok. No explanation.

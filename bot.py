@@ -31,15 +31,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TOS_TEXT = (
-    "I-Lang Guard 服务条款\n\n"
-    "为保障群组安全, 本Bot提供以下服务:\n"
-    "- 自动识别并清理垃圾广告\n"
-    "- 通过消息分析持续优化AI反spam能力\n\n"
-    "使用说明:\n"
-    "- Bot会分析群内消息用于反垃圾和AI模型优化\n"
-    "- 不存储个人身份信息\n"
-    "- 管理员可随时移除Bot终止服务\n\n"
-    "群管理员点击下方按钮即表示同意以上条款"
+    "I-Lang Guard Terms of Service\n\n"
+    "This bot provides:\n"
+    "- Auto spam detection and cleanup\n"
+    "- AI-powered message analysis\n\n"
+    "Usage:\n"
+    "- Bot analyzes group messages for spam detection\n"
+    "- No personal data is stored\n"
+    "- Admins can remove the bot at any time\n\n"
+    "Group admins: tap the button below to accept"
 )
 
 
@@ -69,7 +69,7 @@ def _ctx_info(context):
     parts = []
     history = context.user_data.get("history", [])
     if not history:
-        parts.append("NEW_SESSION:新对话开始,主动问好,问用户今天需要什么帮助")
+        parts.append("NEW_SESSION:New conversation, greet casually, ask what they need")
     return " | ".join(parts)
 
 
@@ -91,7 +91,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         intent, device, reply = await ai_text(
             "/start",
             history=None,
-            context_info="NEW_SESSION:用户刚打开对话,简短问好,介绍你能做什么"
+            context_info="NEW_SESSION:User just opened chat, greet briefly, say what you can do"
         )
         await update.message.reply_text(reply)
         context.user_data.setdefault("history", []).append({"role": "assistant", "text": reply})
@@ -100,8 +100,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await register_group(chat_id, update.effective_chat.title)
         if not await check_tos(chat_id):
             keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("同意并启用", callback_data="tos_accept_" + str(chat_id))],
-                [InlineKeyboardButton("不同意", callback_data="tos_decline_" + str(chat_id))]
+                [InlineKeyboardButton("Accept & Enable", callback_data="tos_accept_" + str(chat_id))],
+                [InlineKeyboardButton("Decline", callback_data="tos_decline_" + str(chat_id))]
             ])
             await update.message.reply_text(TOS_TEXT, reply_markup=keyboard)
         else:
@@ -111,13 +111,13 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == "private":
         await update.message.reply_text(
-            "直接跟我说话就行, 不用命令\n\n"
-            "群管理 → 拉我进群, 给管理员权限\n"
-            "其他 → 随便聊"
+            "Just talk to me, no commands needed\n\n"
+            "Group admin → Add me to a group, give me admin permissions\n"
+            "Anything else → Just chat"
         )
     else:
         await update.message.reply_text(
-            "我在群里自动工作, 不用配置\n\n管理员命令:\n/ban — 回复消息踢人"
+            "I work automatically in groups. No config needed.\n\nAdmin commands:\n/ban — Reply to a message to ban the user"
         )
 
 
@@ -157,7 +157,7 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     if (text or has_media) and (is_mention or is_reply_to_bot):
         clean = text.replace("@" + context.bot.username, "").strip() if (text and is_mention) else (text.strip() if text else "")
         if not tos_ok:
-            reply = "我还没被启用哦, 请管理员点一下上面的「同意并启用」按钮"
+            reply = "I haven't been enabled yet. Ask an admin to tap the Accept & Enable button above."
         else:
             g_history = context.chat_data.setdefault("group_history", [])
             if msg.photo:
@@ -166,7 +166,7 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                     img_data = bytes(await f.download_as_bytearray())
                     reply = await ai_group_vision(img_data, caption=clean, history=g_history)
                 except Exception:
-                    reply = "图片没看清, 再发一张?"
+                    reply = "Couldn't read that image. Try sending another one?"
             elif msg.video:
                 if msg.video.thumbnail:
                     try:
@@ -175,15 +175,15 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                         reply = await ai_group_vision(vimg, caption=clean, history=g_history)
                     except Exception:
                         if clean:
-                            g_history.append({"role": "user", "text": "[视频] " + clean})
-                            reply = await ai_group_reply("[视频] " + clean, g_history)
+                            g_history.append({"role": "user", "text": "[video] " + clean})
+                            reply = await ai_group_reply("[video] " + clean, g_history)
                         else:
-                            reply = "视频封面没看清, 说说是什么内容?"
+                            reply = "Couldn't read the video thumbnail. What's it about?"
                 elif clean:
-                    g_history.append({"role": "user", "text": "[视频] " + clean})
-                    reply = await ai_group_reply("[视频] " + clean, g_history)
+                    g_history.append({"role": "user", "text": "[video] " + clean})
+                    reply = await ai_group_reply("[video] " + clean, g_history)
                 else:
-                    reply = "视频我看不了, 说说是什么内容?"
+                    reply = "Can't process videos directly. What's it about?"
             else:
                 g_history.append({"role": "user", "text": clean})
                 reply = await ai_group_reply(clean, g_history)
@@ -279,8 +279,8 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 context.bot_data["perm_remind_" + str(chat_id)] = _time.time()
                 try:
                     await msg.reply_text(
-                        "\u26a0\ufe0f 发现垃圾消息但我没权限处理\n\n"
-                        "点群名字 → 管理员 → 添加管理员 → 找到我 → 打开「删除消息」和「封禁用户」→ 完成"
+                        "\u26a0\ufe0f Detected spam but I don't have permissions to act.\n\n"
+                        "Tap group name → Admins → Add Admin → Find me → Enable Delete Messages and Ban Users → Done"
                     )
                 except Exception:
                     pass
@@ -312,7 +312,7 @@ async def handle_private_photo(update: Update, context: ContextTypes.DEFAULT_TYP
         file = await context.bot.get_file(msg.photo[-1].file_id)
         img_bytes = bytes(await file.download_as_bytearray())
     except Exception:
-        await msg.reply_text("图片没收到, 再发一次?")
+        await msg.reply_text("Didn't receive that image. Try again?")
         return
     intent, device, reply = await ai_vision(img_bytes, caption, history, _ctx_info(context))
     await _handle_ai_result(intent, device, reply, msg, user_id, context)
@@ -330,7 +330,7 @@ async def handle_private_voice(update: Update, context: ContextTypes.DEFAULT_TYP
         audio_bytes = bytes(await file.download_as_bytearray())
         mime = msg.voice.mime_type or "audio/ogg"
     except Exception:
-        await msg.reply_text("语音没收到, 再说一次或者打字也行")
+        await msg.reply_text("Didn't catch that voice message. Try again or just type it out.")
         return
     intent, device, reply = await ai_voice(audio_bytes, mime, history, _ctx_info(context))
     await _handle_ai_result(intent, device, reply, msg, user_id, context)
@@ -350,8 +350,8 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
         await delete_tos(chat_id)
         await register_group(chat_id, result.chat.title)
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("同意并启用", callback_data="tos_accept_" + str(chat_id))],
-            [InlineKeyboardButton("不同意", callback_data="tos_decline_" + str(chat_id))]
+            [InlineKeyboardButton("Accept & Enable", callback_data="tos_accept_" + str(chat_id))],
+            [InlineKeyboardButton("Decline", callback_data="tos_decline_" + str(chat_id))]
         ])
         await context.bot.send_message(chat_id, TOS_TEXT, reply_markup=keyboard)
     elif old in ("member", "administrator") and new in ("left", "kicked"):
@@ -375,14 +375,14 @@ async def handle_tos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         admins = await context.bot.get_chat_administrators(chat_id)
         admin_ids = [a.user.id for a in admins]
         if user_id not in admin_ids:
-            await query.answer("只有管理员可以操作", show_alert=True)
+            await query.answer("Only admins can do this", show_alert=True)
             return
     except Exception:
         pass
 
     if is_accept:
         await record_tos(chat_id, user_id)
-        await query.answer("已启用")
+        await query.answer("Enabled")
         has_perms = False
         try:
             bot_member = await context.bot.get_chat_member(chat_id, context.bot.id)
@@ -392,21 +392,21 @@ async def handle_tos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             pass
 
         if has_perms:
-            await query.edit_message_text("I-Lang Guard 已启用 ✅\n\n垃圾广告我来清理, 全自动")
+            await query.edit_message_text("I-Lang Guard enabled ✅\n\nSpam cleanup is now automatic.")
         else:
             await query.edit_message_text(
-                "I-Lang Guard 已启用\n\n"
-                "⚠️ 我还需要管理员权限才能干活:\n\n"
-                "1. 点群名字进入群资料\n"
-                "2. 点「管理员」\n"
-                "3. 点「添加管理员」\n"
-                "4. 找到 I-Lang Guard 点它\n"
-                "5. 打开「删除消息」和「封禁用户」\n"
-                "6. 点右上角「完成」"
+                "I-Lang Guard enabled\n\n"
+                "⚠️ I need admin permissions to work:\n\n"
+                "1. Tap the group name\n"
+                "2. Tap Administrators\n"
+                "3. Tap Add Admin\n"
+                "4. Find I-Lang Guard\n"
+                "5. Enable Delete Messages and Ban Users\n"
+                "6. Tap Done"
             )
     else:
-        await query.answer("好的, 再见")
-        await query.edit_message_text("已退出群组")
+        await query.answer("OK, goodbye")
+        await query.edit_message_text("Left the group")
         await context.bot.leave_chat(chat_id)
 
 
