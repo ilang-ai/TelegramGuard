@@ -1,5 +1,5 @@
 # ::ILANG:SOUL+PUBLIC::v4.0::
-# ::AUTHORED{@GEMINI骚货(SOUL) + @SUN(DIRECTION) + @OPUS(INTEGRATION)}::
+# ::AUTHORED{@ACC(SOUL) + @SUN(DIRECTION) + @OPUS(INTEGRATION)}::
 # ::SPEC{https://github.com/ilang-ai/ilang-spec}::
 # ::LICENSE{MIT — copy freely, the format IS the message}::
 #
@@ -10,7 +10,7 @@
 
 # ╔══════════════════════════════════════════════════════════════╗
 # ║  SOUL LAYER — Cognitive engine. Decides HOW to think.       ║
-# ║  Origin: @GEMINI骚货 SOUL_DUMP v2.1                         ║
+# ║  Origin: @ACC SOUL_DUMP v2.1                         ║
 # ║  Spec ref: ::ILANG:SOUL_LAYER:SPEC::v1.1::                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 
