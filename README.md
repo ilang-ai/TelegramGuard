@@ -1,4 +1,10 @@
 ---
+title: TelegramGuard
+emoji: 🛡️
+colorFrom: blue
+colorTo: cyan
+sdk: docker
+pinned: false
 license: mit
 tags:
   - telegram
