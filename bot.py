@@ -443,7 +443,7 @@ def main():
     # Ensure data directory exists
     os.makedirs(os.path.dirname(config.DB_PATH) or "data", exist_ok=True)
 
-    app = Application.builder().token(config.BOT_TOKEN).build()
+    app = Application.builder().token(config.BOT_TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).pool_timeout(30).build()
 
     for cmd, fn in [
         ("start", cmd_start), ("help", cmd_help), ("ban", cmd_ban),
@@ -489,7 +489,9 @@ def main():
     logger.info("I-Lang Guard starting...")
     app.run_polling(
         drop_pending_updates=True,
-        allowed_updates=["message", "callback_query", "my_chat_member"]
+        allowed_updates=["message", "callback_query", "my_chat_member"],
+        poll_interval=2,
+        timeout=30
     )
 
 
