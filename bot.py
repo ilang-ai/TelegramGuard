@@ -4,6 +4,8 @@ import os
 import time as _time
 import hashlib as _hashlib
 import asyncio
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -408,9 +410,29 @@ async def handle_tos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await context.bot.leave_chat(chat_id)
 
 
+# ==================== Health Check (HF Space) ====================
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def log_message(self, *args):
+        pass
+
+def start_health_server():
+    port = int(os.environ.get("PORT", 7860))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Health check on port " + str(port))
+
+
 # ==================== Main ====================
 
 def main():
+    # Health check for HF Space
+    start_health_server()
     # Ensure data directory exists
     os.makedirs(os.path.dirname(config.DB_PATH) or "data", exist_ok=True)
 
