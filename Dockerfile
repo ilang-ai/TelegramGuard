@@ -9,6 +9,8 @@ COPY . .
 
 RUN mkdir -p data
 
-EXPOSE 7860
+# Cloud Run uses 8080, HF Space uses 7860
+ENV PORT=8080
+EXPOSE 8080
 
 CMD ["python", "bot.py"]

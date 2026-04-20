@@ -438,10 +438,10 @@ def start_health_server():
 # ==================== Main ====================
 
 def main():
-    # Health check for HF Space
-    start_health_server()
     # Ensure data directory exists
-    os.makedirs(os.path.dirname(config.DB_PATH) or "data", exist_ok=True)
+    db_dir = os.path.dirname(config.DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
 
     app = Application.builder().token(config.BOT_TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).pool_timeout(30).build()
 
@@ -472,26 +472,45 @@ def main():
     async def _test_ai():
         try:
             from modules.chat import model, _safe_text
-            r = await model.generate_content_async("Say hello in one word. JSON: {\"intent\":\"chat\",\"reply\":\"your word\"}")
+            r = await model.generate_content_async("Say hello in one word. JSON: {\"intent\":\"chat\",\"reply\":\"your word\"}", safety_settings=[
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ])
             text = _safe_text(r)
             if text:
                 logger.info("AI startup test OK: " + text[:100])
             else:
                 logger.error("AI startup test FAILED: empty response")
-                if hasattr(r, 'prompt_feedback'):
-                    logger.error("Feedback: " + str(r.prompt_feedback))
-                if hasattr(r, 'candidates') and r.candidates:
-                    logger.error("Candidates: " + str(r.candidates))
         except Exception as e:
             logger.error("AI startup test EXCEPTION: " + str(e))
     loop.run_until_complete(_test_ai())
 
-    logger.info("I-Lang Guard starting...")
-    app.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=["message", "callback_query", "my_chat_member"],
-        bootstrap_retries=10
-    )
+    # Detect mode: webhook (Cloud Run / Railway) or polling (VPS)
+    webhook_url = os.environ.get("WEBHOOK_URL", "")
+    port = int(os.environ.get("PORT", 8080))
+
+    if webhook_url:
+        # Webhook mode: Cloud Run, Railway, Render, etc.
+        logger.info("I-Lang Guard starting (webhook mode: " + webhook_url + ")")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path="webhook",
+            webhook_url=webhook_url + "/webhook",
+            drop_pending_updates=True,
+            allowed_updates=["message", "callback_query", "my_chat_member"],
+        )
+    else:
+        # Polling mode: VPS, local dev
+        start_health_server()
+        logger.info("I-Lang Guard starting (polling mode)")
+        app.run_polling(
+            drop_pending_updates=True,
+            allowed_updates=["message", "callback_query", "my_chat_member"],
+            bootstrap_retries=10
+        )
 
 
 if __name__ == "__main__":
