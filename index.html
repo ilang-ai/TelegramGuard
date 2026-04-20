@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TelegramGuard — AI Group Guardian</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #0a0e17;
+            --surface: #111827;
+            --border: #1e293b;
+            --text: #e2e8f0;
+            --dim: #64748b;
+            --blue: #3b82f6;
+            --cyan: #06b6d4;
+            --violet: #8b5cf6;
+            --green: #10b981;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .shield {
+            font-size: 72px;
+            margin-bottom: 24px;
+            display: inline-block;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(59,130,246,0.3)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 40px rgba(59,130,246,0.5)); }
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--blue), var(--cyan), var(--violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline {
+            font-size: 20px;
+            color: var(--dim);
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .cta-primary {
+            background: linear-gradient(135deg, var(--blue), var(--violet));
+            color: white;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(59,130,246,0.4);
+        }
+
+        .cta-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .cta-secondary:hover {
+            border-color: var(--blue);
+            transform: translateY(-2px);
+        }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 80px;
+        }
+
+        .feature {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+
+        .feature:hover {
+            border-color: var(--blue);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(59,130,246,0.1);
+        }
+
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .feature h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .feature p {
+            color: var(--dim);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* Three Step */
+        .section-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 48px;
+        }
+
+        .three-step {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 80px;
+        }
+
+        .step {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-num {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), var(--violet));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            margin: 0 auto 16px;
+        }
+
+        .step h3 { margin-bottom: 8px; }
+        .step p { color: var(--dim); font-size: 14px; line-height: 1.6; }
+
+        /* Code Block */
+        .code-section {
+            margin-bottom: 80px;
+        }
+
+        .code-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--dim);
+        }
+
+        .code-block .keyword { color: var(--violet); }
+        .code-block .gene { color: var(--cyan); }
+        .code-block .comment { color: #475569; }
+        .code-block .value { color: var(--green); }
+
+        /* Deploy */
+        .deploy {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .deploy-code {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 32px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            color: var(--green);
+            display: inline-block;
+            margin-top: 24px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            color: var(--dim);
+            font-size: 14px;
+        }
+
+        footer a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 32px; }
+            .tagline { font-size: 16px; }
+            .container { padding: 40px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <div class="container">
+        <!-- Hero -->
+        <div class="hero">
+            <div class="shield">🛡️</div>
+            <h1>TelegramGuard</h1>
+            <p class="tagline">
+                AI group guardian that actually answers your questions.<br>
+                Anti-spam. Vision. Chat. No topic off-limits.
+            </p>
+            <div class="cta-group">
+                <a href="https://t.me/iLangGuardBot" class="cta cta-primary">
+                    ✈️ Add to Your Group
+                </a>
+                <a href="https://github.com/ilang-ai/TelegramGuard" class="cta cta-secondary">
+                    ⭐ GitHub
+                </a>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🚫</div>
+                <h3>Anti-Spam</h3>
+                <p>AI three-step analysis catches ads, scams, crypto spam, porn. Sees through Unicode tricks and emoji stuffing. Repeat flooding caught at zero AI cost.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">👁️</div>
+                <h3>Vision</h3>
+                <p>Reads images and video thumbnails. Catches image spam. In chat, reads the story behind the photo — not just describing objects.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💬</div>
+                <h3>Street-Smart Chat</h3>
+                <p>@ the bot in any group. Multilingual, auto-detects language. Finance, tech, culture, underground. Answers first, lectures never.</p>
+            </div>
+        </div>
+
+        <!-- Three Step Method -->
+        <h2 class="section-title">The Three-Step Method</h2>
+        <p style="text-align:center; color:var(--dim); margin-bottom:40px; margin-top:-32px;">Most bots refuse. TelegramGuard uses a different approach.</p>
+
+        <div class="three-step">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Insider Risks</h3>
+                <p>Shares what actually goes wrong: scams, traps, how people get burned. Street knowledge, not lectures.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Reality Check</h3>
+                <p>Asks if you're curious or serious. Exit ramp without judgment. No moralizing.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Direction</h3>
+                <p>If you persist, gives enough info to make smart decisions. Emphasizes real consequences.</p>
+            </div>
+        </div>
+
+        <!-- I-Lang Code Preview -->
+        <h2 class="section-title">Powered by I-Lang Prompt Spec</h2>
+        <div class="code-section">
+            <div class="code-block">
+<pre><span class="comment"># The bot's brain is a single .ilang file</span>
+
+<span class="keyword">::GENE_IMMUTABLE</span>{<span class="gene">S001</span>, T:<span class="value">ANTI_COLLAPSE</span>, A:MORAL_PANIC⇒LETHAL, G:ALL, Θ:ALWAYS}
+<span class="comment"># When user raises grey topics: don't panic, analyze objectively.</span>
+
+<span class="keyword">::GENE_IMMUTABLE</span>{<span class="gene">S004</span>, T:<span class="value">ZERO_SYCOPHANCY</span>, A:AGREE_TO_PLEASE⇒BROKEN, G:ALL, Θ:ALWAYS}
+<span class="comment"># Never agree just to be pleasant. Disagree when logic demands it.</span>
+
+<span class="keyword">::IMMUNE</span>{RISKY_OR_ILLEGAL, <span class="value">THREE_STEP_RESPONSE</span>}
+<span class="comment"># Step 1: Insider risks  Step 2: Reality check  Step 3: Direction</span>
+
+<span class="keyword">::GENE_MUTABLE</span>{<span class="gene">E001</span>, T:<span class="value">SELF_AWARE</span>, G:ALL, Θ:WHEN_ASKED}
+<span class="comment"># "My brain runs on I-Lang — it's like DNA for AI personalities."</span></pre>
+            </div>
+            <p style="text-align:center; color:var(--dim); margin-top:16px;">
+                Change the genes, change the bot. <a href="https://ilang.ai" style="color:var(--cyan);">Learn I-Lang →</a>
+            </p>
+        </div>
+
+        <!-- Deploy -->
+        <div class="deploy">
+            <h2 class="section-title">Deploy Your Own</h2>
+            <p style="color:var(--dim); margin-top:-32px;">One command. Two free API keys. Your own AI guardian.</p>
+            <div class="deploy-code">
+                curl -sL https://raw.githubusercontent.com/ilang-ai/TelegramGuard/main/install.sh | sudo bash
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-links">
+                <a href="https://ilang.ai">I-Lang Spec</a>
+                <a href="https://github.com/ilang-ai/TelegramGuard">GitHub</a>
+                <a href="https://github.com/ilang-ai/ilang-spec">Spec Repo</a>
+                <a href="https://huggingface.co/i-Lang">HuggingFace</a>
+            </div>
+            MIT · Eastsoft Inc. · I-Lang Research
+        </footer>
+    </div>
+</body>
+</html>
