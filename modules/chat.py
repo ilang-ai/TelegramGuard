@@ -128,7 +128,7 @@ async def ai_text(text, history=None, context_info=""):
     try:
         c = _ctx(history, context_info)
         prompt = c + "\nuser: " + text if c else "user: " + text
-        r = await model.generate_content_async(prompt)
+        r = await model.generate_content_async(prompt, safety_settings=SAFETY_SETTINGS)
         raw = _safe_text(r)
         if not raw:
             feedback = ""
@@ -155,7 +155,7 @@ async def ai_vision(image_bytes, caption="", history=None, context_info=""):
         prompt = VISION_PROMPT + "\n" + c
         if caption:
             prompt += "\nuser: " + caption
-        r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
+        r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}], safety_settings=SAFETY_SETTINGS)
         return _parse(_safe_text(r))
     except Exception as e:
         logger.warning("AI vision: " + str(e))
@@ -166,7 +166,7 @@ async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_inf
     try:
         c = _ctx(history, context_info)
         prompt = SYSTEM_PROMPT + "\n" + c + "\nUser sent a voice message:"
-        r = await vision_model.generate_content_async([prompt, {"mime_type": mime_type, "data": audio_bytes}])
+        r = await vision_model.generate_content_async([prompt, {"mime_type": mime_type, "data": audio_bytes}], safety_settings=SAFETY_SETTINGS)
         return _parse(_safe_text(r))
     except Exception as e:
         logger.warning("AI voice: " + str(e))
@@ -176,7 +176,7 @@ async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_inf
 async def ai_judge_group_message(text):
     try:
         prompt = ANTISPAM_TEXT_PROMPT + "\n\nMessage content: " + text[:1000]
-        r = await vision_model.generate_content_async(prompt)
+        r = await vision_model.generate_content_async(prompt, safety_settings=SAFETY_SETTINGS)
         result = (_safe_text(r) or "ok").lower()
         return "spam" in result
     except Exception:
@@ -188,7 +188,7 @@ async def ai_judge_group_image(image_bytes, caption=""):
         prompt = ANTISPAM_TEXT_PROMPT + "\n\nJudge this image. Reply ONLY: spam or ok."
         if caption:
             prompt += "\nCaption: " + caption[:500]
-        r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
+        r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}], safety_settings=SAFETY_SETTINGS)
         result = (_safe_text(r) or "ok").lower()
         return "spam" in result
     except Exception:
@@ -203,7 +203,7 @@ async def ai_group_vision(image_bytes, caption="", history=None):
             prompt += "\nuser: " + caption
         else:
             prompt += "\nuser: [shared an image]"
-        r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
+        r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}], safety_settings=SAFETY_SETTINGS)
         raw = _safe_text(r)
         if not raw:
             return _deflect()
@@ -219,7 +219,7 @@ async def ai_group_reply(text, history=None):
     try:
         ctx = _ctx(history, "GROUP_CHAT: You were @mentioned in a group. Reply directly, 1-2 sentences.")
         prompt = ctx + "\nuser: " + text
-        r = await model.generate_content_async(prompt)
+        r = await model.generate_content_async(prompt, safety_settings=SAFETY_SETTINGS)
         raw = _safe_text(r)
         if not raw:
             return _deflect()
