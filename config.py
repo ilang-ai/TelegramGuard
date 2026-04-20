@@ -8,7 +8,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 # Database
-DB_PATH = os.environ.get("DB_PATH", "data/bot.db")
+DB_PATH = os.environ.get("DB_PATH", "/data/bot.db")
 
 # Anti-spam
 SPAM_NEWUSER_COOLDOWN = int(os.environ.get("SPAM_NEWUSER_COOLDOWN", "300"))
