@@ -9,6 +9,14 @@ logger = logging.getLogger(__name__)
 
 genai.configure(api_key=config.GEMINI_API_KEY)
 
+# Relax Gemini safety filters — bot needs to understand slang and adult humor
+SAFETY_SETTINGS = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
+
 # Load prompts from .ilang files (prompts/ if exists, else prompts_demo/)
 def _load_prompt(name):
     for d in ("prompts", "prompts_demo"):
@@ -29,8 +37,15 @@ GROUP_WELCOME = (
     "给我管理员权限(删消息+封人)就行, 其他不用管"
 )
 
-model = genai.GenerativeModel(config.GEMINI_MODEL, system_instruction=SYSTEM_PROMPT)
-vision_model = genai.GenerativeModel(config.GEMINI_MODEL)
+model = genai.GenerativeModel(
+    config.GEMINI_MODEL,
+    system_instruction=SYSTEM_PROMPT,
+    safety_settings=SAFETY_SETTINGS
+)
+vision_model = genai.GenerativeModel(
+    config.GEMINI_MODEL,
+    safety_settings=SAFETY_SETTINGS
+)
 
 
 def _parse(raw):
@@ -91,6 +106,9 @@ async def ai_text(text, history=None, context_info=""):
         r = await model.generate_content_async(prompt)
         raw = r.text.strip() if r.text else ""
         if not raw:
+            # Log the block reason if available
+            if hasattr(r, 'prompt_feedback') and r.prompt_feedback:
+                logger.warning("AI blocked: " + str(r.prompt_feedback))
             return ("chat", None, _deflect())
         return _parse(raw)
     except Exception as e:
