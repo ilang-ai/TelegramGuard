@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 genai.configure(api_key=config.GEMINI_API_KEY)
 
-# Relax Gemini safety filters — bot needs to understand slang and adult humor
+# Relax Gemini safety filters
 SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -23,12 +23,19 @@ def _load_prompt(name):
         path = os.path.join(os.path.dirname(os.path.dirname(__file__)), d, name)
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
-                return f.read()
+                content = f.read()
+                logger.info("Loaded prompt: " + path + " (" + str(len(content)) + " chars)")
+                return content
+    logger.warning("Prompt not found: " + name)
     return ""
 
 SYSTEM_PROMPT = _load_prompt("persona.ilang")
 ANTISPAM_TEXT_PROMPT = _load_prompt("antispam.ilang")
 VISION_PROMPT = _load_prompt("vision.ilang")
+
+if not SYSTEM_PROMPT:
+    SYSTEM_PROMPT = "You are TelegramGuard, a helpful AI assistant on Telegram. Reply concisely in the user's language. JSON format: {\"intent\": \"chat\", \"device\": null, \"reply\": \"your text\"}"
+    logger.warning("Using fallback system prompt")
 
 GROUP_WELCOME = (
     "I-Lang Guard is here\n\n"
@@ -90,6 +97,24 @@ def _ctx(history, info):
     return "\n".join(parts)
 
 
+def _safe_text(response):
+    """Safely extract text from Gemini response — r.text throws ValueError when blocked."""
+    try:
+        if response.text:
+            return response.text.strip()
+    except (ValueError, AttributeError):
+        pass
+    # Try extracting from candidates
+    try:
+        if response.candidates:
+            for c in response.candidates:
+                if hasattr(c, 'content') and c.content and c.content.parts:
+                    return c.content.parts[0].text.strip()
+    except Exception:
+        pass
+    return ""
+
+
 def _deflect():
     lines = [
         "That's a tough one. What else can I help with?",
@@ -104,15 +129,23 @@ async def ai_text(text, history=None, context_info=""):
         c = _ctx(history, context_info)
         prompt = c + "\nuser: " + text if c else "user: " + text
         r = await model.generate_content_async(prompt)
-        raw = r.text.strip() if r.text else ""
+        raw = _safe_text(r)
         if not raw:
-            # Log the block reason if available
-            if hasattr(r, 'prompt_feedback') and r.prompt_feedback:
-                logger.warning("AI blocked: " + str(r.prompt_feedback))
+            feedback = ""
+            if hasattr(r, 'prompt_feedback'):
+                feedback = str(r.prompt_feedback)
+            if hasattr(r, 'candidates') and r.candidates:
+                for cand in r.candidates:
+                    if hasattr(cand, 'finish_reason'):
+                        feedback += " finish:" + str(cand.finish_reason)
+                    if hasattr(cand, 'safety_ratings'):
+                        feedback += " safety:" + str(cand.safety_ratings)
+            logger.warning("AI empty response. feedback=" + feedback + " prompt_len=" + str(len(prompt)))
             return ("chat", None, _deflect())
+        logger.info("AI raw[" + str(len(raw)) + "]: " + raw[:200])
         return _parse(raw)
     except Exception as e:
-        logger.warning("AI text: " + str(e))
+        logger.warning("AI text exception: " + str(e))
         return ("chat", None, _deflect())
 
 
@@ -123,7 +156,7 @@ async def ai_vision(image_bytes, caption="", history=None, context_info=""):
         if caption:
             prompt += "\nuser: " + caption
         r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
-        return _parse(r.text if r.text else "")
+        return _parse(_safe_text(r))
     except Exception as e:
         logger.warning("AI vision: " + str(e))
         return ("chat", None, "Couldn't read that image. Try another one?")
@@ -134,7 +167,7 @@ async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_inf
         c = _ctx(history, context_info)
         prompt = SYSTEM_PROMPT + "\n" + c + "\nUser sent a voice message:"
         r = await vision_model.generate_content_async([prompt, {"mime_type": mime_type, "data": audio_bytes}])
-        return _parse(r.text if r.text else "")
+        return _parse(_safe_text(r))
     except Exception as e:
         logger.warning("AI voice: " + str(e))
         return ("chat", None, "Didn't catch that. Try again or type it out.")
@@ -144,7 +177,7 @@ async def ai_judge_group_message(text):
     try:
         prompt = ANTISPAM_TEXT_PROMPT + "\n\nMessage content: " + text[:1000]
         r = await vision_model.generate_content_async(prompt)
-        result = r.text.strip().lower() if r.text else "ok"
+        result = (_safe_text(r) or "ok").lower()
         return "spam" in result
     except Exception:
         return False
@@ -156,7 +189,7 @@ async def ai_judge_group_image(image_bytes, caption=""):
         if caption:
             prompt += "\nCaption: " + caption[:500]
         r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
-        result = r.text.strip().lower() if r.text else "ok"
+        result = (_safe_text(r) or "ok").lower()
         return "spam" in result
     except Exception:
         return False
@@ -171,7 +204,7 @@ async def ai_group_vision(image_bytes, caption="", history=None):
         else:
             prompt += "\nuser: [shared an image]"
         r = await vision_model.generate_content_async([prompt, {"mime_type": "image/jpeg", "data": image_bytes}])
-        raw = r.text.strip() if r.text else ""
+        raw = _safe_text(r)
         if not raw:
             return _deflect()
         intent, device, reply = _parse(raw)
@@ -187,7 +220,7 @@ async def ai_group_reply(text, history=None):
         ctx = _ctx(history, "GROUP_CHAT: You were @mentioned in a group. Reply directly, 1-2 sentences.")
         prompt = ctx + "\nuser: " + text
         r = await model.generate_content_async(prompt)
-        raw = r.text.strip() if r.text else ""
+        raw = _safe_text(r)
         if not raw:
             return _deflect()
         intent, device, reply = _parse(raw)
