@@ -2,7 +2,7 @@
 title: TelegramGuard
 emoji: 🛡️
 colorFrom: blue
-colorTo: cyan
+colorTo: indigo
 sdk: docker
 pinned: false
 license: mit
