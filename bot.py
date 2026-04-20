@@ -490,8 +490,11 @@ def main():
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=["message", "callback_query", "my_chat_member"],
-        poll_interval=2,
-        timeout=30
+        connect_timeout=30,
+        read_timeout=30,
+        write_timeout=30,
+        pool_timeout=30,
+        bootstrap_retries=10
     )
 
 
