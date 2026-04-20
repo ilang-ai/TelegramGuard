@@ -23,6 +23,7 @@ from modules.chat import (
     GROUP_WELCOME
 )
 from modules.admin import is_admin, is_bot_admin, register_group
+from modules.prefilter import prefilter
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -231,36 +232,42 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
             spam = True
             logger.info("REPEAT SPAM: user=" + str(uid) + " chat=" + str(chat_id) + " count=" + str(len(recent_same)))
 
-    # AI spam check (skip if already caught)
+    # Pre-filter: keyword/regex/forward/new-account (zero API cost)
     if not spam:
-        if msg.photo:
-            try:
-                f = await context.bot.get_file(msg.photo[-1].file_id)
-                data = bytes(await f.download_as_bytearray())
-                spam = await ai_judge_group_image(data, text)
-            except Exception:
-                if text:
-                    spam = await ai_judge_group_message(text)
-        elif msg.video:
-            if msg.video.thumbnail:
+        verdict = prefilter(msg, user, text)
+        if verdict == "spam":
+            spam = True
+        elif verdict == "ai":
+            # Needs AI analysis (API budget available)
+            if msg.photo:
                 try:
-                    vf = await context.bot.get_file(msg.video.thumbnail.file_id)
-                    vdata = bytes(await vf.download_as_bytearray())
-                    spam = await ai_judge_group_image(vdata, text)
+                    f = await context.bot.get_file(msg.photo[-1].file_id)
+                    data = bytes(await f.download_as_bytearray())
+                    spam = await ai_judge_group_image(data, text)
                 except Exception:
                     if text:
                         spam = await ai_judge_group_message(text)
+            elif msg.video:
+                if msg.video.thumbnail:
+                    try:
+                        vf = await context.bot.get_file(msg.video.thumbnail.file_id)
+                        vdata = bytes(await vf.download_as_bytearray())
+                        spam = await ai_judge_group_image(vdata, text)
+                    except Exception:
+                        if text:
+                            spam = await ai_judge_group_message(text)
+                elif text:
+                    spam = await ai_judge_group_message(text)
+                elif msg.forward_date:
+                    spam = True
+            elif msg.document or msg.sticker:
+                if text:
+                    spam = await ai_judge_group_message(text)
+                elif msg.forward_date:
+                    spam = True
             elif text:
                 spam = await ai_judge_group_message(text)
-            elif msg.forward_date:
-                spam = True
-        elif msg.document or msg.sticker:
-            if text:
-                spam = await ai_judge_group_message(text)
-            elif msg.forward_date:
-                spam = True
-        elif text:
-            spam = await ai_judge_group_message(text)
+        # verdict == "clean" → skip AI, let it through
 
     if spam:
         try:
