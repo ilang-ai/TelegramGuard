@@ -468,32 +468,13 @@ def main():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init_db())
 
-    # Startup test: verify Gemini API works
-    async def _test_ai():
-        try:
-            from modules.chat import model, _safe_text
-            r = await model.generate_content_async("Say hello in one word. JSON: {\"intent\":\"chat\",\"reply\":\"your word\"}", safety_settings=[
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-            ])
-            text = _safe_text(r)
-            if text:
-                logger.info("AI startup test OK: " + text[:100])
-            else:
-                logger.error("AI startup test FAILED: empty response")
-        except Exception as e:
-            logger.error("AI startup test EXCEPTION: " + str(e))
-    loop.run_until_complete(_test_ai())
-
     # Detect mode: webhook (Cloud Run / Railway) or polling (VPS)
     webhook_url = os.environ.get("WEBHOOK_URL", "")
     port = int(os.environ.get("PORT", 8080))
 
     if webhook_url:
-        # Webhook mode: Cloud Run, Railway, Render, etc.
-        logger.info("I-Lang Guard starting (webhook mode: " + webhook_url + ")")
+        # Webhook mode: start listening IMMEDIATELY (Cloud Run health check is strict)
+        logger.info("I-Lang Guard starting (webhook: " + webhook_url + ")")
         app.run_webhook(
             listen="0.0.0.0",
             port=port,
@@ -503,7 +484,25 @@ def main():
             allowed_updates=["message", "callback_query", "my_chat_member"],
         )
     else:
-        # Polling mode: VPS, local dev
+        # Polling mode: run AI test first, then start
+        async def _test_ai():
+            try:
+                from modules.chat import model, _safe_text
+                r = await model.generate_content_async("Say hi in one word. JSON: {\"intent\":\"chat\",\"reply\":\"hi\"}", safety_settings=[
+                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+                ])
+                text = _safe_text(r)
+                if text:
+                    logger.info("AI startup test OK: " + text[:100])
+                else:
+                    logger.error("AI startup test FAILED: empty response")
+            except Exception as e:
+                logger.error("AI startup test EXCEPTION: " + str(e))
+        loop.run_until_complete(_test_ai())
+
         start_health_server()
         logger.info("I-Lang Guard starting (polling mode)")
         app.run_polling(
