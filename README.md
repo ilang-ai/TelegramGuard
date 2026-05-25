@@ -170,6 +170,6 @@ Built with **[I-Lang Prompt Spec](https://ilang.ai)** — structured AI instruct
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)
 [![HF](https://img.shields.io/badge/HF-i--Lang-yellow?logo=huggingface)](https://huggingface.co/i-Lang)
 
-MIT | [Eastsoft Inc.](https://eastsoft.com) | [I-Lang Research](https://research.ilang.ai)
+MIT | [iLang Inc.](https://eastsoft.com) | [I-Lang Research](https://research.ilang.ai)
 
 </div>
