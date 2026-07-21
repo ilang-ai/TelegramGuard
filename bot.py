@@ -487,14 +487,10 @@ def main():
         # Polling mode: run AI test first, then start
         async def _test_ai():
             try:
-                from modules.chat import model, _safe_text
-                r = await model.generate_content_async("Say hi in one word. JSON: {\"intent\":\"chat\",\"reply\":\"hi\"}", safety_settings=[
-                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-                ])
-                text = _safe_text(r)
+                from modules import ai_provider
+                text = await ai_provider.generate_text(
+                    "Say hi in one word. JSON: {\"intent\":\"chat\",\"reply\":\"hi\"}",
+                    max_tokens=50)
                 if text:
                     logger.info("AI startup test OK: " + text[:100])
                 else:
