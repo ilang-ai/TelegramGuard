@@ -22,5 +22,8 @@ SPAM_NEWUSER_COOLDOWN = int(os.environ.get("SPAM_NEWUSER_COOLDOWN", "300"))
 SPAM_REPEAT_THRESHOLD = int(os.environ.get("SPAM_REPEAT_THRESHOLD", "3"))
 SPAM_REPEAT_WINDOW = int(os.environ.get("SPAM_REPEAT_WINDOW", "300"))
 
+# Chinese-slang lexicon hard-hit threshold (prefilter Layer 2.5). Higher = stricter.
+LEXICON_HARD_THRESHOLD = int(os.environ.get("LEXICON_HARD_THRESHOLD", "6"))
+
 # Admin user ID (auto-detected from first /start)
 ADMIN_USER_ID = None

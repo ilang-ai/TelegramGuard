@@ -7,6 +7,8 @@ import re
 import time
 import logging
 
+from modules import lexicon
+
 logger = logging.getLogger(__name__)
 
 # Spam keyword patterns (multilingual)
@@ -150,6 +152,13 @@ def prefilter(msg, user, text):
     # Layer 2: Keyword + link/contact (very high accuracy)
     if text and keyword_spam(text):
         logger.info("PREFILTER keyword_spam: user=" + str(user.id) + " text=" + text[:50])
+        return "spam"
+
+    # Layer 2.5: Chinese slang lexicon — normalized scoring (NFKC + zero-width +
+    # homoglyph), catches full-width / lookalike / split-char evasion the regex misses
+    # (disguised 收米 / 加V / 日结 / 上车 ...).
+    if text and lexicon.is_hard_spam(text):
+        logger.info("PREFILTER lexicon_spam: user=" + str(user.id) + " text=" + text[:50])
         return "spam"
 
     # Layer 3: Suspicious new account + link

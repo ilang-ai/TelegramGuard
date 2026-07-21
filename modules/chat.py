@@ -89,6 +89,13 @@ def _deflect():
     return random.choice(lines)
 
 
+def _is_spam(raw):
+    """Parse a spam-judge reply. Fixes the old `"spam" in result` substring bug
+    (a wordy 'not spam' would count as spam). Expects the model to answer spam/ok."""
+    s = (raw or "").strip().lower().lstrip("\"'`* ")
+    return s.startswith("spam") or s.startswith("yes")
+
+
 async def ai_text(text, history=None, context_info=""):
     try:
         c = _ctx(history, context_info)
@@ -134,7 +141,7 @@ async def ai_judge_group_message(text):
     try:
         prompt = ANTISPAM_TEXT_PROMPT + "\n\nMessage content: " + text[:1000]
         raw = await ai_provider.generate_text(prompt, max_tokens=8, temperature=0.0)
-        return "spam" in (raw or "ok").lower()
+        return _is_spam(raw)
     except Exception:
         return False
 
@@ -145,7 +152,7 @@ async def ai_judge_group_image(image_bytes, caption=""):
         if caption:
             prompt += "\nCaption: " + caption[:500]
         raw = await ai_provider.generate_vision(prompt, image_bytes, max_tokens=8, temperature=0.0)
-        return "spam" in (raw or "ok").lower()
+        return _is_spam(raw)
     except Exception:
         return False
 
