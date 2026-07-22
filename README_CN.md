@@ -68,7 +68,8 @@ journalctl -u telegramguard -f     # 看日志
 2. 创建 [HuggingFace Space](https://huggingface.co/new-space) → Docker SDK → Blank
 3. GitHub 仓库 → Settings → Secrets → 加 `HF_TOKEN`(你的 HF write token)
 4. HF Space → Settings → Secrets → 加 `BOT_TOKEN` + `AI_API_KEY`
-5. 推代码到 GitHub,自动部署到 Space
+5. HF Space → Settings → 开启**持久化存储**,让 `/data`(SQLite 库)可写 —— 或加个 `DB_PATH` secret 指向可写路径
+6. 推代码到 GitHub,自动部署到 Space
 
 ### 方式三:手动
 

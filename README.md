@@ -1,9 +1,10 @@
 ---
-title: TelegramGuard
+title: antispam.bot
 emoji: 🛡️
 colorFrom: blue
 colorTo: indigo
-sdk: static
+sdk: docker
+app_port: 8080
 pinned: false
 license: mit
 tags:
@@ -83,7 +84,8 @@ journalctl -u telegramguard -f     # live logs
 2. Create a [HuggingFace Space](https://huggingface.co/new-space) → Docker SDK → Blank
 3. GitHub repo → Settings → Secrets → add `HF_TOKEN` (your HF write token)
 4. HF Space → Settings → Secrets → add `BOT_TOKEN` + `AI_API_KEY`
-5. Push to GitHub — it auto-deploys to the Space
+5. HF Space → Settings → enable **persistent storage** so `/data` (the SQLite DB) is writable — or add a `DB_PATH` secret pointing somewhere writable
+6. Push to GitHub — it auto-deploys to the Space
 
 ### Option 3 — Manual
 
