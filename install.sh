@@ -55,17 +55,22 @@ echo ""
 read -p "  Paste your Bot Token: " BOT_TOKEN
 echo ""
 
-# Gemini API Key
-echo -e "${BOLD}Gemini API Key${NC} (free)"
-echo -e "  Get one: ${CYAN}https://aistudio.google.com/apikey${NC}"
+# AI API Key (any OpenAI-compatible provider)
+echo -e "${BOLD}AI API Key${NC}"
+echo -e "  Any OpenAI-compatible provider works. Default: ${CYAN}SiliconFlow${NC}"
+echo -e "  Get one: ${CYAN}https://cloud.siliconflow.cn${NC}"
+echo -e "  (OpenAI / DeepSeek / local model? set AI_BASE_URL + AI_MODEL in .env after install)"
 echo ""
-read -p "  Paste your API Key: " GEMINI_API_KEY
+read -p "  Paste your AI API Key: " AI_API_KEY
 echo ""
 
 # Write env file
 cat > "$INSTALL_DIR/.env" << EOF
 BOT_TOKEN=$BOT_TOKEN
-GEMINI_API_KEY=$GEMINI_API_KEY
+AI_API_KEY=$AI_API_KEY
+# AI provider defaults to SiliconFlow — uncomment to override:
+# AI_BASE_URL=https://api.siliconflow.cn/v1
+# AI_MODEL=deepseek-ai/DeepSeek-V4-Flash
 DB_PATH=$INSTALL_DIR/data/bot.db
 EOF
 

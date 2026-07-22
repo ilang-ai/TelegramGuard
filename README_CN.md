@@ -4,11 +4,11 @@
 
 **真正回答问题的AI群管机器人**
 
-反垃圾 · 看图识别 · 智能对话 · 知无不答
+反垃圾 · 看图识别 · 智能对话 · 零配置
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
-[![Gemini](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-4285F4)](https://aistudio.google.com)
+[![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#自己部署)
 
 **[English](README.md)** | **[中文](README_CN.md)**
 
@@ -37,15 +37,7 @@
 
 **看图** — 识别图片和视频缩略图。拦截图片类垃圾信息。聊天模式下, 分析照片背后真正发生了什么, 不是干巴巴描述物体。
 
-**聊天** — 在群里@它或者私聊。自动检测语言, 用你的语言回复。金融、技术、感情、文化, 什么都聊。先回答, 不说教。
-
-**敏感话题三步法** — 别的机器人直接拒绝, TelegramGuard不一样:
-
-| 步骤 | 做什么 |
-|------|--------|
-| **风险揭底** | 像老江湖一样告诉你这里面的坑: 骗局、陷阱、后果 |
-| **确认意图** | 问你是好奇还是认真的, 不带评判 |
-| **给方向** | 给足够的信息让你做聪明的决定 |
+**聊天** — 在群里@它或者私聊。自动检测语言, 用你的语言回复。什么都能问, 给你清晰实用的回答 — 敏感话题客观陈述, 真正有害的事守住边界。
 
 ---
 
@@ -59,9 +51,9 @@ curl -sL https://raw.githubusercontent.com/ilang-ai/TelegramGuard/main/install.s
 
 一行命令搞定: 下载代码、装依赖、填token、创建系统服务、自动启动。
 
-你需要准备两样东西（都免费）:
+你需要准备两样东西:
 - **Bot Token** — 打开电报 → 找 [@BotFather](https://t.me/BotFather) → 发 `/newbot`
-- **Gemini API Key** — 去 [aistudio.google.com/apikey](https://aistudio.google.com/apikey) 免费申请
+- **AI API Key** — 任意 OpenAI 兼容的服务。默认用 [硅基流动](https://cloud.siliconflow.cn)（便宜、国内直连不用梯子）；OpenAI / DeepSeek / 本地模型也行。换服务用 `AI_BASE_URL` 和 `AI_MODEL` 覆盖。
 
 装完后管理:
 ```bash
@@ -75,7 +67,7 @@ journalctl -u telegramguard -f    # 看日志
 1. Fork 这个仓库
 2. 创建 [HuggingFace Space](https://huggingface.co/new-space) → Docker SDK → Blank
 3. GitHub仓库 Settings → Secrets → 加 `HF_TOKEN`
-4. HF Space Settings → Secrets → 加 `BOT_TOKEN` + `GEMINI_API_KEY`
+4. HF Space Settings → Secrets → 加 `BOT_TOKEN` + `AI_API_KEY`
 5. 推代码自动部署
 
 ### 方式三: 手动
@@ -84,10 +76,12 @@ journalctl -u telegramguard -f    # 看日志
 git clone https://github.com/ilang-ai/TelegramGuard.git
 cd TelegramGuard
 pip install -r requirements.txt
-export BOT_TOKEN="你的token"
-export GEMINI_API_KEY="你的key"
+cp .env.example .env         # 填 BOT_TOKEN + AI_API_KEY(默认硅基流动;换服务改 AI_BASE_URL/AI_MODEL)
+set -a; source .env; set +a  # 把 .env 加载进环境变量
 python bot.py
 ```
+
+所有可调项（识图模型、语音模型、反垃圾阈值）见 [`.env.example`](.env.example)。
 
 ---
 
@@ -105,11 +99,14 @@ prompts_demo/
 每个文件里的 `::GENE` 定义一个行为:
 
 ```
-::GENE_IMMUTABLE{S001, T:ANTI_COLLAPSE, A:MORAL_PANIC⇒LETHAL, G:ALL, Θ:ALWAYS}
-# 用户问敏感话题时: 不慌, 客观分析
+::GENE_IMMUTABLE{S002, T:RUTHLESS_RED_TEAM, A:FLATTER⇒FAIL, G:ALL, Θ:ALWAYS}
+# 给它看方案, 它不夸你, 直接找致命漏洞
 
-::IMMUNE{RISKY_OR_ILLEGAL, THREE_STEP_RESPONSE}
-# 第一步: 揭底风险  第二步: 确认意图  第三步: 给方向
+::GENE_MUTABLE{P002, T:CONCISE, G:ALL, Θ:ALWAYS}
+# 2-3 句话。先给答案, 后补细节, 零废话。
+
+::IMMUNE{SPAM, DETECT_THEN_NUKE}
+# 广告 / 诈骗 / 刷屏 → 删除 + 记过, 看穿规避手法。
 ```
 
 改基因 = 改机器人。想自定义: 复制 `prompts_demo/` 到 `prompts/`, 然后编辑。机器人优先加载 `prompts/`。
@@ -138,10 +135,14 @@ TelegramGuard/
 ├── install.sh             一键安装脚本
 ├── Dockerfile             HF Space部署
 ├── modules/
-│   ├── chat.py            AI引擎（启动时加载.ilang）
+│   ├── ai_provider.py     OpenAI兼容 AI 层（文本·识图·语音）
+│   ├── chat.py            提示词编排（加载.ilang）
+│   ├── prefilter.py       零成本垃圾预过滤 + 三路分诊
+│   ├── lexicon.py         黑话/规避归一化 + 打分
+│   ├── ilang_judge.py     I-Lang 判定函数
+│   ├── admin.py           群管理
 │   ├── db.py              SQLite共享连接 + 异步锁
-│   ├── database.py        数据表
-│   └── admin.py           群管理
+│   └── database.py        数据表
 └── prompts_demo/          AI人格定义（.ilang文件）
 ```
 
