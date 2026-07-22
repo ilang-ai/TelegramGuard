@@ -74,7 +74,7 @@ def _ctx_info(context):
     return " | ".join(parts)
 
 
-async def _handle_ai_result(intent, device, reply, msg, user_id, context):
+async def _handle_ai_result(intent, reply, msg, user_id, context):
     history = context.user_data.setdefault("history", [])
     await msg.reply_text(reply)
     history.append({"role": "assistant", "text": reply})
@@ -89,7 +89,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         config.ADMIN_USER_ID = update.effective_user.id
     if update.effective_chat.type == "private":
         context.user_data["history"] = []
-        intent, device, reply = await ai_text(
+        intent, reply = await ai_text(
             "/start",
             history=None,
             context_info="NEW_SESSION:User just opened chat, greet briefly, say what you can do"
@@ -303,8 +303,8 @@ async def handle_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = msg.from_user.id
     history = context.user_data.setdefault("history", [])
     history.append({"role": "user", "text": msg.text})
-    intent, device, reply = await ai_text(msg.text, history, _ctx_info(context))
-    await _handle_ai_result(intent, device, reply, msg, user_id, context)
+    intent, reply = await ai_text(msg.text, history, _ctx_info(context))
+    await _handle_ai_result(intent, reply, msg, user_id, context)
 
 
 async def handle_private_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -321,8 +321,8 @@ async def handle_private_photo(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception:
         await msg.reply_text("Didn't receive that image. Try again?")
         return
-    intent, device, reply = await ai_vision(img_bytes, caption, history, _ctx_info(context))
-    await _handle_ai_result(intent, device, reply, msg, user_id, context)
+    intent, reply = await ai_vision(img_bytes, caption, history, _ctx_info(context))
+    await _handle_ai_result(intent, reply, msg, user_id, context)
 
 
 async def handle_private_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -339,8 +339,8 @@ async def handle_private_voice(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception:
         await msg.reply_text("Didn't catch that voice message. Try again or just type it out.")
         return
-    intent, device, reply = await ai_voice(audio_bytes, mime, history, _ctx_info(context))
-    await _handle_ai_result(intent, device, reply, msg, user_id, context)
+    intent, reply = await ai_voice(audio_bytes, mime, history, _ctx_info(context))
+    await _handle_ai_result(intent, reply, msg, user_id, context)
 
 
 # ==================== Events ====================

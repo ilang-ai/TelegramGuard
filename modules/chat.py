@@ -27,7 +27,7 @@ ANTISPAM_TEXT_PROMPT = _load_prompt("antispam.ilang")
 VISION_PROMPT = _load_prompt("vision.ilang")
 
 if not SYSTEM_PROMPT:
-    SYSTEM_PROMPT = "You are TelegramGuard, a helpful AI assistant on Telegram. Reply concisely in the user's language. JSON format: {\"intent\": \"chat\", \"device\": null, \"reply\": \"your text\"}"
+    SYSTEM_PROMPT = "You are TelegramGuard, a helpful AI assistant on Telegram. Reply concisely in the user's language. JSON format: {\"intent\": \"chat\", \"reply\": \"your text\"}"
     logger.warning("Using fallback system prompt")
 
 GROUP_WELCOME = (
@@ -40,7 +40,7 @@ GROUP_WELCOME = (
 
 def _parse(raw):
     if not raw:
-        return ("chat", None, "...")
+        return ("chat", "...")
     t = raw.strip()
     if t.startswith("```"):
         nl = t.find("\n")
@@ -49,7 +49,7 @@ def _parse(raw):
         t = t[:-3].strip()
     try:
         d = json.loads(t)
-        return (d.get("intent", "chat"), d.get("device"), d.get("reply", t))
+        return (d.get("intent", "chat"), d.get("reply", t))
     except json.JSONDecodeError:
         pass
     last_brace = t.rfind("}")
@@ -58,15 +58,15 @@ def _parse(raw):
         if start >= 0:
             try:
                 d = json.loads(t[start:last_brace + 1])
-                return (d.get("intent", "chat"), d.get("device"), d.get("reply", t))
+                return (d.get("intent", "chat"), d.get("reply", t))
             except json.JSONDecodeError:
                 pass
         last_brace = t.rfind("}", 0, last_brace)
     for line in t.split("\n"):
         line = line.strip()
         if line and not line.startswith("{") and not line.startswith("taint") and not line.startswith("The "):
-            return ("chat", None, line)
-    return ("chat", None, "...")
+            return ("chat", line)
+    return ("chat", "...")
 
 
 def _ctx(history, info):
@@ -102,12 +102,12 @@ async def ai_text(text, history=None, context_info=""):
         prompt = c + "\nuser: " + text if c else "user: " + text
         raw = await ai_provider.generate_text(prompt, system=SYSTEM_PROMPT)
         if not raw:
-            return ("chat", None, _deflect())
+            return ("chat", _deflect())
         logger.info("AI raw[" + str(len(raw)) + "]: " + raw[:200])
         return _parse(raw)
     except Exception as e:
         logger.warning("AI text exception: " + str(e))
-        return ("chat", None, _deflect())
+        return ("chat", _deflect())
 
 
 async def ai_vision(image_bytes, caption="", history=None, context_info=""):
@@ -120,7 +120,7 @@ async def ai_vision(image_bytes, caption="", history=None, context_info=""):
         return _parse(raw)
     except Exception as e:
         logger.warning("AI vision: " + str(e))
-        return ("chat", None, "Couldn't read that image. Try another one?")
+        return ("chat", "Couldn't read that image. Try another one?")
 
 
 async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_info=""):
@@ -134,7 +134,7 @@ async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_inf
         return _parse(raw)
     except Exception as e:
         logger.warning("AI voice: " + str(e))
-        return ("chat", None, "Didn't catch that. Try again or type it out.")
+        return ("chat", "Didn't catch that. Try again or type it out.")
 
 
 async def ai_judge_group_message(text):
@@ -169,7 +169,7 @@ async def ai_group_vision(image_bytes, caption="", history=None):
         raw = (raw or "").strip()
         if not raw:
             return _deflect()
-        intent, device, reply = _parse(raw)
+        intent, reply = _parse(raw)
         if reply in ("...", ""):
             return _deflect()
         return reply
@@ -185,7 +185,7 @@ async def ai_group_reply(text, history=None):
         raw = (raw or "").strip()
         if not raw:
             return _deflect()
-        intent, device, reply = _parse(raw)
+        intent, reply = _parse(raw)
         if reply in ("...", ""):
             return _deflect()
         return reply

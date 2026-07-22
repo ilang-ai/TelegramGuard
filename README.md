@@ -17,101 +17,115 @@ tags:
 
 # 🛡️ TelegramGuard
 
-**AI group guardian that actually answers your questions.**
+**The open-source engine behind [antispam.bot](https://antispam.bot)**
 
-Anti-spam. Vision. Chat. Zero config, free forever.
+The AI guardian that keeps your Telegram groups clean — and actually answers your questions.
+Zero config, free forever, self-hostable.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
-[![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#host-your-own)
+[![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 
-**[English](README.md)** | **[中文](README_CN.md)**
+**[English](README.md)** · **[中文](README_CN.md)** · **[antispam.bot](https://antispam.bot)**
 
 </div>
 
 ---
 
-## Use It Now (Zero Setup)
+## Add it to your group (zero setup)
 
-Add the official bot to your Telegram group. No install, no config, no cost.
+Add the official bot — no install, no config, no cost.
 
-**[@iLangGuardBot](https://t.me/iLangGuardBot)**
+### → [@iLangGuardBot](https://t.me/iLangGuardBot)
 
-1. Open Telegram, search `@iLangGuardBot`
+1. Search `@iLangGuardBot` on Telegram
 2. Add it to your group
-3. Grant admin permissions (delete messages + ban users)
-4. Done. Spam protection is automatic.
+3. Give it admin — **delete messages** + **ban users**
+4. Done. Spam is cleaned automatically; @ it anytime with a question.
 
-You can also DM the bot directly for AI chat.
-
----
-
-## What It Does
-
-**Anti-Spam** — AI three-step analysis detects ads, scams, crypto spam, porn, political propaganda. Sees through Unicode tricks, emoji stuffing, homophone substitution. Catches repeat flooding (same message 3+ times) with zero AI cost. Bans and deletes all recent messages in parallel.
-
-**Vision** — Reads images and video thumbnails. Catches image spam. In chat mode, analyzes what's really happening in a photo, not just describing objects.
-
-**Chat** — @ the bot in any group or DM privately. Multilingual, auto-detects your language. Ask it anything and get a clear, useful answer — factual on sensitive topics, sensible boundaries on genuinely harmful ones.
+You can also DM it directly for AI chat.
 
 ---
 
-## Host Your Own
+## What it does
 
-### Option 1: VPS (One Command)
+**🚫 Anti-Spam** — Catches ads, scams, crypto & gambling spam. Sees through Unicode lookalikes, full-width and zero-width tricks, emoji stuffing and slang. A zero-cost pre-filter kills the obvious stuff before it ever reaches the AI, and repeat-flooding is caught with no AI call at all.
+
+**👁️ Vision** — Reads images and video thumbnails to catch image-based ads and QR-code scams. In chat, it reads the story behind a photo, not just the pixels.
+
+**💬 Chat** — @ it in any group or DM it privately. Multilingual, auto-detects your language. Ask it anything and get a clear, useful answer — factual on sensitive topics, with sensible boundaries on genuinely harmful ones.
+
+---
+
+## Self-Host
+
+Bring any **OpenAI-compatible** AI provider — [SiliconFlow](https://cloud.siliconflow.cn) (default), OpenAI, DeepSeek, or a local model. You need two things:
+
+- **Bot Token** — [@BotFather](https://t.me/BotFather) → `/newbot`
+- **AI API Key** — from your provider (default targets SiliconFlow)
+
+### Option 1 — VPS (one command)
 
 ```bash
 curl -sL https://raw.githubusercontent.com/ilang-ai/TelegramGuard/main/install.sh | sudo bash
 ```
 
-The script handles everything: clone, dependencies, token setup, systemd service, auto-start.
+Clones, installs dependencies, prompts for your two keys, and runs as a systemd service. Manage it with:
 
-You need two things:
-- **Bot Token** — open Telegram → [@BotFather](https://t.me/BotFather) → `/newbot`
-- **AI API Key** — any OpenAI-compatible provider. Default targets [SiliconFlow](https://cloud.siliconflow.cn) (cheap, no VPN needed in China); OpenAI / DeepSeek / a local model work too. Override the endpoint with `AI_BASE_URL` and `AI_MODEL`.
-
-After install:
 ```bash
-systemctl status telegramguard     # check status
+systemctl status telegramguard     # status
 systemctl restart telegramguard    # restart
-journalctl -u telegramguard -f    # live logs
+journalctl -u telegramguard -f     # live logs
 ```
 
-### Option 2: HuggingFace Space (Free, No Server)
+### Option 2 — HuggingFace Space (free, no server)
 
 1. Fork this repo
 2. Create a [HuggingFace Space](https://huggingface.co/new-space) → Docker SDK → Blank
-3. GitHub repo Settings → Secrets → add `HF_TOKEN` (your HF write token)
-4. HF Space Settings → Secrets → add `BOT_TOKEN` + `AI_API_KEY`
-5. Push to GitHub triggers auto-deploy to HF
+3. GitHub repo → Settings → Secrets → add `HF_TOKEN` (your HF write token)
+4. HF Space → Settings → Secrets → add `BOT_TOKEN` + `AI_API_KEY`
+5. Push to GitHub — it auto-deploys to the Space
 
-### Option 3: Manual
+### Option 3 — Manual
 
 ```bash
 git clone https://github.com/ilang-ai/TelegramGuard.git
 cd TelegramGuard
 pip install -r requirements.txt
-cp .env.example .env         # fill in BOT_TOKEN + AI_API_KEY (defaults to SiliconFlow; edit AI_BASE_URL/AI_MODEL for another provider)
+cp .env.example .env         # fill in BOT_TOKEN + AI_API_KEY
 set -a; source .env; set +a  # load .env into the environment
 python bot.py
 ```
 
-See [`.env.example`](.env.example) for every tunable (vision models, audio model, spam thresholds).
+After creating your bot, send to [@BotFather](https://t.me/BotFather): `/setjoingroups → Enable` and `/setprivacy → Disable` (so it can see group messages).
+
+### Configuration
+
+Everything is set via environment variables — see [`.env.example`](.env.example):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BOT_TOKEN` | *(required)* | Telegram bot token |
+| `AI_API_KEY` | *(required)* | OpenAI-compatible API key |
+| `AI_BASE_URL` | `https://api.siliconflow.cn/v1` | Provider endpoint |
+| `AI_MODEL` | `deepseek-ai/DeepSeek-V4-Flash` | Text model |
+| `AI_VISION_MODELS` | `Qwen/Qwen3-VL-30B…` | Vision fallback chain (comma-separated) |
+| `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | Voice-message model |
+| `AI_IMAGE_MAX_WIDTH` | `600` | Downscale width before vision calls |
+| `LEXICON_HARD_THRESHOLD` | `6` | Slang pre-filter strictness (higher = stricter) |
 
 ---
 
 ## Customize the AI
 
-The bot's brain lives in `.ilang` files using [I-Lang Prompt Spec](https://ilang.ai):
+The bot's brain lives in plain `.ilang` files — [I-Lang Prompt Spec](https://ilang.ai), where each `::GENE` defines a behavior.
 
 ```
 prompts_demo/
-├── persona.ilang     How it thinks + how it talks
-├── antispam.ilang    What counts as spam
-└── vision.ilang      How it reads images
+├── persona.ilang     how it thinks + how it talks
+├── antispam.ilang    what counts as spam
+└── vision.ilang      how it reads images
 ```
-
-Each file contains `::GENE` definitions that control behavior:
 
 ```
 ::GENE_IMMUTABLE{S002, T:RUTHLESS_RED_TEAM, A:FLATTER⇒FAIL, G:ALL, Θ:ALWAYS}
@@ -124,20 +138,9 @@ Each file contains `::GENE` definitions that control behavior:
 # Ads / scams / flooding → delete + strike, see through evasion.
 ```
 
-Change the genes, change the bot. To customize: copy `prompts_demo/` to `prompts/`, edit. The bot loads `prompts/` first.
+Change the genes, change the bot. To customize: copy `prompts_demo/` to `prompts/` (loaded first) and edit.
 
 **[Learn I-Lang Prompt Spec →](https://ilang.ai)**
-
----
-
-## BotFather Setup
-
-After creating your bot, send to [@BotFather](https://t.me/BotFather):
-
-```
-/setjoingroups  → Enable
-/setprivacy     → Disable
-```
 
 ---
 
@@ -145,10 +148,10 @@ After creating your bot, send to [@BotFather](https://t.me/BotFather):
 
 ```
 TelegramGuard/
-├── bot.py                 Core (group + private + events)
-├── config.py              Env vars
-├── install.sh             One-line VPS installer
-├── Dockerfile             HF Space deployment
+├── bot.py                 Entry — handlers (group · private · events)
+├── config.py              Env config
+├── install.sh             One-command VPS installer
+├── Dockerfile             Container build
 ├── modules/
 │   ├── ai_provider.py     OpenAI-compatible AI layer (text · vision · audio)
 │   ├── chat.py            Prompt orchestration (loads .ilang)
@@ -165,12 +168,12 @@ TelegramGuard/
 
 <div align="center">
 
-Built with **[I-Lang Prompt Spec](https://ilang.ai)** — structured AI instructions using genetic code.
+Built with **[I-Lang Prompt Spec](https://ilang.ai)** — structured AI instructions as genetic code.
 
 [![Spec](https://img.shields.io/badge/spec-ilang--ai/ilang--spec-black?logo=github)](https://github.com/ilang-ai/ilang-spec)
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)
 [![HF](https://img.shields.io/badge/HF-i--Lang-yellow?logo=huggingface)](https://huggingface.co/i-Lang)
 
-MIT | [iLang Inc.](https://eastsoft.com) | [I-Lang Research](https://research.ilang.ai)
+MIT · © [iLang Inc.](https://eastsoft.com) · [antispam.bot](https://antispam.bot) · [ilang.ai](https://ilang.ai)
 
 </div>
