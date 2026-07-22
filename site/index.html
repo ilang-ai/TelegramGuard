@@ -10,7 +10,7 @@
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@600;700&family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -54,7 +54,7 @@
   .nav{display:flex;justify-content:space-between;align-items:center;height:66px}
   .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:16px;color:var(--ink)}
   .brand .bot{color:var(--green)}
-  .nav-links{display:flex;align-items:center;gap:28px;font-size:14px}
+  .nav-links{display:flex;align-items:center;gap:22px;font-size:14px}
   .nav-links a{color:rgba(185,194,206,.75)}
   .nav-links a:hover{color:var(--ink)}
   .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;border-radius:10px;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease;white-space:nowrap}
@@ -63,6 +63,9 @@
   .btn-ghost{border:1px solid rgba(255,255,255,.16);color:#DCE3EB;background:rgba(255,255,255,.03)}
   .btn-ghost:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
   .nav-cta{padding:9px 16px;font-size:13px}
+  .lang{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.05) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' stroke='%239FAAB6' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 9px center;color:#DCE3EB;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:7px 24px 7px 11px;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer}
+  .lang:hover{border-color:rgba(255,255,255,.3)}
+  .lang option{background:#0B0E14;color:#DCE3EB}
 
   /* hero */
   .hero{text-align:center;padding:72px 0 64px;position:relative}
@@ -137,6 +140,16 @@
   footer .legal{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:rgba(185,194,206,.5)}
   footer .legal a{color:rgba(185,194,206,.5)}
 
+  /* i18n / RTL */
+  :root[dir="rtl"] body{font-family:'Vazirmatn','Outfit',system-ui,sans-serif}
+  :root[dir="rtl"] .eyebrow,:root[dir="rtl"] .badge,:root[dir="rtl"] .hero .sub,:root[dir="rtl"] .stats{font-family:'Vazirmatn','JetBrains Mono',monospace}
+  :root[dir="rtl"] .deploy .tag{right:auto;left:18px}
+  :root[dir="rtl"] .stat{border-right:0;border-left:1px solid var(--line)}
+  :root[dir="rtl"] .stat:last-child{border-left:0}
+  :root[dir="rtl"] .step{border-right:0;border-left:1px solid var(--line)}
+  :root[dir="rtl"] .step:last-child{border-left:0}
+  :root[dir="rtl"] .codecard,:root[dir="rtl"] pre,:root[dir="rtl"] code{direction:ltr;text-align:left;unicode-bidi:embed}
+
   /* responsive */
   @media (max-width:860px){
     .nav-links a:not(.nav-cta){display:none}
@@ -144,6 +157,8 @@
     .steps{grid-template-columns:1fr}
     .step{border-right:0;border-bottom:1px solid var(--line);padding:22px 0}
     .step:last-child{border-bottom:0}
+    :root[dir="rtl"] .step{border-left:0;border-bottom:1px solid var(--line)}
+    :root[dir="rtl"] .step:last-child{border-bottom:0}
   }
   @media (max-width:680px){
     .grid-3{grid-template-columns:1fr}
@@ -163,11 +178,12 @@
       antispam<span class="bot">.bot</span>
     </div>
     <nav class="nav-links">
-      <a href="#capabilities">Capabilities</a>
-      <a href="#setup">Setup</a>
-      <a href="#opensource">Open Source</a>
-      <a href="#selfhost">Self-Host</a>
-      <a class="btn btn-primary nav-cta" href="https://t.me/iLangGuardBot">Add to Telegram</a>
+      <a href="#capabilities" data-i18n="nav_cap">Capabilities</a>
+      <a href="#setup" data-i18n="nav_setup">Setup</a>
+      <a href="#opensource" data-i18n="nav_os">Open Source</a>
+      <a href="#selfhost" data-i18n="nav_selfhost">Self-Host</a>
+      <select id="langSel" class="lang" aria-label="Language"><option value="en">EN</option><option value="zh">中文</option><option value="ru">RU</option><option value="es">ES</option><option value="ar">AR</option><option value="fa">FA</option></select>
+      <a class="btn btn-primary nav-cta" href="https://t.me/iLangGuardBot" data-i18n="cta_add">Add to Telegram</a>
     </nav>
   </div>
 </header>
@@ -177,43 +193,43 @@
   <!-- HERO -->
   <section class="hero">
     <div class="mark"><div class="m-out"></div><div class="m-in"><div class="scan"></div></div><div class="m-glyph">a.</div></div>
-    <div class="badge"><span class="dot"></span>ZERO CONFIG · FREE FOREVER · MIT</div>
+    <div class="badge"><span class="dot"></span><span data-i18n="hero_badge">ZERO CONFIG · FREE FOREVER · MIT</span></div>
     <h1>antispam<span class="grad-text">.bot</span></h1>
-    <p class="lead">The AI guardian that keeps your Telegram groups clean — and actually answers your questions.</p>
-    <p class="sub">Anti-spam. Vision. Chat. Zero config. Open source.</p>
+    <p class="lead" data-i18n="hero_lead">The AI guardian that keeps your Telegram groups clean — and actually answers your questions.</p>
+    <p class="sub" data-i18n="hero_sub">Anti-spam. Vision. Chat. Zero config. Open source.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://t.me/iLangGuardBot">⚡ Add to Telegram</a>
-      <a class="btn btn-ghost" href="https://github.com/ilang-ai/TelegramGuard">GitHub →</a>
+      <a class="btn btn-primary" href="https://t.me/iLangGuardBot" data-i18n="hero_cta_add">⚡ Add to Telegram</a>
+      <a class="btn btn-ghost" href="https://github.com/ilang-ai/TelegramGuard" data-i18n="hero_cta_gh">GitHub →</a>
     </div>
     <div class="stats">
-      <div class="stat"><b>0-config</b><span>to deploy</span></div>
-      <div class="stat"><b style="color:var(--green)">$0</b><span>forever</span></div>
-      <div class="stat"><b style="color:var(--blue)">MIT</b><span>open source</span></div>
-      <div class="stat"><b>∞</b><span>no lock-in</span></div>
+      <div class="stat"><b data-i18n="stat1_val">0-config</b><span data-i18n="stat1_label">to deploy</span></div>
+      <div class="stat"><b style="color:var(--green)">$0</b><span data-i18n="stat2_label">forever</span></div>
+      <div class="stat"><b style="color:var(--blue)">MIT</b><span data-i18n="stat3_label">open source</span></div>
+      <div class="stat"><b>∞</b><span data-i18n="stat4_label">no lock-in</span></div>
     </div>
   </section>
 
   <!-- CAPABILITIES -->
   <section id="capabilities">
     <div class="center-head">
-      <div class="eyebrow">Capabilities</div>
-      <h2>Guards Your Group, Free Forever</h2>
+      <div class="eyebrow" data-i18n="cap_eyebrow">Capabilities</div>
+      <h2 data-i18n="cap_h2">Guards Your Group, Free Forever</h2>
     </div>
     <div class="grid-3">
       <div class="card">
         <div class="ic" style="background:rgba(255,92,86,.12)">🚫</div>
-        <h3>Anti-Spam</h3>
-        <p>AI catches ads, scams, crypto &amp; gambling spam. Sees through Unicode lookalikes, full-width and zero-width tricks, emoji stuffing and slang. A zero-cost pre-filter kills the obvious stuff before it ever touches the AI.</p>
+        <h3 data-i18n="cap1_h3">Anti-Spam</h3>
+        <p data-i18n="cap1_p">AI catches ads, scams, crypto &amp; gambling spam. Sees through Unicode lookalikes, full-width and zero-width tricks, emoji stuffing and slang. A zero-cost pre-filter kills the obvious stuff before it ever touches the AI.</p>
       </div>
       <div class="card">
         <div class="ic" style="background:rgba(59,130,246,.14)">👁️</div>
-        <h3>Vision</h3>
-        <p>Reads images and video thumbnails, catches image-based ads and QR-code scams. In chat, it reads the story behind the photo, not just the pixels.</p>
+        <h3 data-i18n="cap2_h3">Vision</h3>
+        <p data-i18n="cap2_p">Reads images and video thumbnails, catches image-based ads and QR-code scams. In chat, it reads the story behind the photo, not just the pixels.</p>
       </div>
       <div class="card">
         <div class="ic" style="background:rgba(6,214,160,.14)">💬</div>
-        <h3>Helpful Chat</h3>
-        <p>@ the bot in any group. Multilingual — it replies in your own language. Ask a question and get a clear, useful answer, not a canned deflection.</p>
+        <h3 data-i18n="cap3_h3">Helpful Chat</h3>
+        <p data-i18n="cap3_p">@ the bot in any group. Multilingual — it replies in your own language. Ask a question and get a clear, useful answer, not a canned deflection.</p>
       </div>
     </div>
   </section>
@@ -222,24 +238,24 @@
   <section id="setup">
     <div class="steps-box">
       <div class="center-head">
-        <div class="eyebrow">Zero Setup</div>
-        <h2>Add It. Done.</h2>
+        <div class="eyebrow" data-i18n="setup_eyebrow">Zero Setup</div>
+        <h2 data-i18n="setup_h2">Add It. Done.</h2>
       </div>
       <div class="steps">
         <div class="step">
           <div class="num">1</div>
-          <h3>Add to your group</h3>
-          <p>Search <code>@iLangGuardBot</code> on Telegram and add it. No install, no config, no cost.</p>
+          <h3 data-i18n="step1_h3">Add to your group</h3>
+          <p data-i18n="step1_p">Search <code>@iLangGuardBot</code> on Telegram and add it. No install, no config, no cost.</p>
         </div>
         <div class="step">
           <div class="num">2</div>
-          <h3>Give it admin</h3>
-          <p>Turn on "delete messages" and "ban users". That's the only switch it needs.</p>
+          <h3 data-i18n="step2_h3">Give it admin</h3>
+          <p data-i18n="step2_p">Turn on "delete messages" and "ban users". That's the only switch it needs.</p>
         </div>
         <div class="step">
           <div class="num">3</div>
-          <h3>It works</h3>
-          <p>Spam gets cleaned automatically. @ it anytime with a question. You do nothing else.</p>
+          <h3 data-i18n="step3_h3">It works</h3>
+          <p data-i18n="step3_p">Spam gets cleaned automatically. @ it anytime with a question. You do nothing else.</p>
         </div>
       </div>
     </div>
@@ -249,10 +265,10 @@
   <section id="opensource">
     <div class="os">
       <div>
-        <div class="eyebrow">Open Source</div>
-        <h2>Powered by I-Lang,<br>Yours to Fork</h2>
-        <p>The bot's brain lives in plain <code>.ilang</code> files — structured AI instructions where each <code>::GENE</code> defines a behavior. Change the genes, change the bot. MIT licensed, self-hostable, no vendor lock-in.</p>
-        <a class="mono" href="https://ilang.ai">Learn I-Lang Spec →</a>
+        <div class="eyebrow" data-i18n="os_eyebrow">Open Source</div>
+        <h2 data-i18n="os_h2">Powered by I-Lang,<br>Yours to Fork</h2>
+        <p data-i18n="os_p">The bot's brain lives in plain <code>.ilang</code> files — structured AI instructions where each <code>::GENE</code> defines a behavior. Change the genes, change the bot. MIT licensed, self-hostable, no vendor lock-in.</p>
+        <a class="mono" href="https://ilang.ai" data-i18n="os_link">Learn I-Lang Spec →</a>
       </div>
       <div class="codecard">
         <div class="codebar"><span class="tl" style="background:#FF5C57"></span><span class="tl" style="background:#FEBC2E"></span><span class="tl" style="background:#28C840"></span><span style="margin-left:6px">guardian.ilang</span></div>
@@ -271,28 +287,28 @@
   <!-- SELF-HOST -->
   <section id="selfhost">
     <div class="center-head">
-      <div class="eyebrow">Self-Host</div>
-      <h2>Run Your Own</h2>
-      <p style="font-size:14px;line-height:1.7;color:var(--muted);max-width:600px;margin:14px auto 0">Bring any OpenAI-compatible AI provider (SiliconFlow, OpenAI, DeepSeek, or a local model). Set your bot token and key, run.</p>
+      <div class="eyebrow" data-i18n="sh_eyebrow">Self-Host</div>
+      <h2 data-i18n="sh_h2">Run Your Own</h2>
+      <p style="font-size:14px;line-height:1.7;color:var(--muted);max-width:600px;margin:14px auto 0" data-i18n="sh_p">Bring any OpenAI-compatible AI provider (SiliconFlow, OpenAI, DeepSeek, or a local model). Set your bot token and key, run.</p>
     </div>
     <div class="grid-3">
       <div class="deploy reco">
-        <span class="tag g">Recommended</span>
+        <span class="tag g" data-i18n="sh1_tag">Recommended</span>
         <div class="em">☁️</div>
         <h3>Google Cloud Run</h3>
-        <p>Serverless, auto-scales, webhook mode, always hot.</p>
+        <p data-i18n="sh1_p">Serverless, auto-scales, webhook mode, always hot.</p>
       </div>
       <div class="deploy">
         <span class="tag b">~$6/mo</span>
         <div class="em">🖥️</div>
         <h3>VPS</h3>
-        <p>Clone, install, set 2 env vars, run as a service.</p>
+        <p data-i18n="sh2_p">Clone, install, set 2 env vars, run as a service.</p>
       </div>
       <div class="deploy">
-        <span class="tag n">Free</span>
+        <span class="tag n" data-i18n="sh3_tag">Free</span>
         <div class="em">📦</div>
         <h3>Docker</h3>
-        <p>Pull the repo, build, set env, up.</p>
+        <p data-i18n="sh3_p">Pull the repo, build, set env, up.</p>
       </div>
     </div>
   </section>
@@ -303,12 +319,45 @@
   <div class="wrap">
     <a class="foot-brand" href="https://ilang.ai">
       <div class="mark" style="width:26px;height:30px"><div class="m-out"></div><div class="m-in" style="inset:1.5px"></div><div class="m-glyph" style="font-size:13px">a.</div></div>
-      Powered by I-Lang Prompt Spec
+      <span data-i18n="foot_brand">Powered by I-Lang Prompt Spec</span>
     </a>
-    <p class="tagline">Structured AI instructions as genetic code. — <a href="https://github.com/ilang-ai/ilang-spec">Spec</a> · <a href="https://github.com/ilang-ai/TelegramGuard">Source</a> · <a href="https://t.me/iLangGuardBot">Telegram</a></p>
+    <p class="tagline" data-i18n="foot_tagline">Structured AI instructions as genetic code. — <a href="https://github.com/ilang-ai/ilang-spec">Spec</a> · <a href="https://github.com/ilang-ai/TelegramGuard">Source</a> · <a href="https://t.me/iLangGuardBot">Telegram</a></p>
     <p class="legal">MIT · © iLang Inc. · <a href="https://ilang.ai">ilang.ai</a></p>
   </div>
 </footer>
+
+<script>
+(function(){
+  var I18N = {"zh":{"nav_cap":"功能","nav_setup":"安装","nav_os":"开源","nav_selfhost":"自托管","cta_add":"添加到 Telegram","hero_badge":"零配置 · 永久免费 · MIT","hero_lead":"守护 Telegram 群组整洁的 AI 卫士——还能真正解答你的问题。","hero_sub":"反垃圾。视觉识别。智能对话。零配置。开源。","hero_cta_add":"⚡ 添加到 Telegram","hero_cta_gh":"GitHub →","stat1_val":"零配置","stat1_label":"即可部署","stat2_label":"永久免费","stat3_label":"开源","stat4_label":"无绑定","cap_eyebrow":"功能","cap_h2":"守护你的群组，永久免费","cap1_h3":"反垃圾信息","cap1_p":"AI 精准识别广告、诈骗、加密货币 &amp; 赌博等垃圾信息。看穿 Unicode 形近字、全角与零宽字符伎俩、表情符号堆砌和黑话。零成本预过滤器在信息触及 AI 之前，就先拦下那些一眼可辨的垃圾。","cap2_h3":"视觉识别","cap2_p":"识别图片和视频缩略图，揪出图片广告与二维码骗局。聊天时，它读懂照片背后的故事，而不只是像素本身。","cap3_h3":"有用的对话","cap3_p":"在任意群组里 @ 机器人。支持多语言——它会用你的语言回复。提个问题，就能得到清晰、实用的解答，而不是敷衍的套话。","setup_eyebrow":"零设置","setup_h2":"添加即用，搞定。","step1_h3":"加入你的群组","step1_p":"在 Telegram 上搜索 <code>@iLangGuardBot</code> 并添加它。免安装、免配置、免费。","step2_h3":"授予管理员权限","step2_p":"开启“删除消息”和“封禁用户”权限。它只需要这一个开关。","step3_h3":"开始生效","step3_p":"垃圾信息自动清除。有问题随时 @ 它。你无需做任何其他操作。","os_eyebrow":"开源","os_h2":"由 I-Lang 驱动，<br>任你 Fork","os_p":"机器人的大脑就存放在简单的 <code>.ilang</code> 文件里——结构化的 AI 指令，每一个 <code>::GENE</code> 定义一种行为。改动基因，就能改变机器人。采用 MIT 许可，可自托管，无厂商锁定。","os_link":"了解 I-Lang 规范 →","sh_eyebrow":"自托管","sh_h2":"运行你自己的实例","sh_p":"接入任意兼容 OpenAI 的 AI 服务商（SiliconFlow、OpenAI、DeepSeek，或本地模型）。填入你的 bot token 和密钥，运行即可。","sh1_tag":"推荐","sh1_p":"无服务器架构、自动扩缩容、webhook 模式、始终热启动。","sh2_p":"克隆、安装、设置 2 个环境变量，作为服务运行。","sh3_tag":"免费","sh3_p":"拉取仓库、构建、设置环境变量，启动。","foot_brand":"由 I-Lang Prompt 规范驱动","foot_tagline":"以基因代码形式编写的结构化 AI 指令。 — <a href=\"https://github.com/ilang-ai/ilang-spec\">规范</a> · <a href=\"https://github.com/ilang-ai/TelegramGuard\">源码</a> · <a href=\"https://t.me/iLangGuardBot\">Telegram</a>"},"ru":{"nav_cap":"Возможности","nav_setup":"Подключение","nav_os":"Открытый код","nav_selfhost":"Self-Host","cta_add":"Добавить в Telegram","hero_badge":"БЕЗ НАСТРОЙКИ · БЕСПЛАТНО НАВСЕГДА · MIT","hero_lead":"AI-хранитель, который поддерживает чистоту в ваших Telegram-группах — и по-настоящему отвечает на ваши вопросы.","hero_sub":"Антиспам. Зрение. Чат. Без настройки. Открытый код.","hero_cta_add":"⚡ Добавить в Telegram","hero_cta_gh":"GitHub →","stat1_val":"0 настроек","stat1_label":"для запуска","stat2_label":"навсегда","stat3_label":"открытый код","stat4_label":"без привязки","cap_eyebrow":"Возможности","cap_h2":"Защищает вашу группу, бесплатно навсегда","cap1_h3":"Антиспам","cap1_p":"AI ловит рекламу, мошенничество, спам про криптовалюту &amp; азартные игры. Видит насквозь похожие символы Unicode, уловки с полноширинными символами и символами нулевой ширины, нагромождение эмодзи и сленг. Предварительный фильтр с нулевой стоимостью отсекает очевидное ещё до того, как оно коснётся AI.","cap2_h3":"Зрение","cap2_p":"Читает изображения и превью видео, ловит рекламу в картинках и мошенничество с QR-кодами. В переписке он считывает историю за фотографией, а не просто пиксели.","cap3_h3":"Полезный чат","cap3_p":"Упомяните бота через @ в любой группе. Многоязычный — отвечает на вашем языке. Задайте вопрос и получите чёткий, полезный ответ, а не шаблонную отписку.","setup_eyebrow":"Без настройки","setup_h2":"Добавьте. Готово.","step1_h3":"Добавьте в группу","step1_p":"Найдите <code>@iLangGuardBot</code> в Telegram и добавьте. Без установки, без настройки, бесплатно.","step2_h3":"Дайте права администратора","step2_p":"Включите «удаление сообщений» и «блокировку пользователей». Это единственный переключатель, который ему нужен.","step3_h3":"Всё работает","step3_p":"Спам чистится автоматически. Упомяните его через @ в любой момент, чтобы задать вопрос. Больше от вас ничего не требуется.","os_eyebrow":"Открытый код","os_h2":"Работает на I-Lang,<br>форкайте свободно","os_p":"Мозг бота живёт в обычных файлах <code>.ilang</code> — структурированные инструкции для AI, где каждый <code>::GENE</code> задаёт поведение. Измените гены — измените бота. Лицензия MIT, возможность self-hosting, без привязки к вендору.","os_link":"Изучить I-Lang Spec →","sh_eyebrow":"Self-Host","sh_h2":"Запустите у себя","sh_p":"Подключите любого OpenAI-совместимого провайдера AI (SiliconFlow, OpenAI, DeepSeek или локальную модель). Укажите токен бота и ключ — и запускайте.","sh1_tag":"Рекомендуется","sh1_p":"Serverless, автомасштабирование, режим webhook, всегда наготове.","sh2_p":"Клонируйте, установите, задайте 2 переменные окружения, запустите как сервис.","sh3_tag":"Бесплатно","sh3_p":"Заберите репозиторий, соберите, задайте окружение, запускайте.","foot_brand":"Работает на I-Lang Prompt Spec","foot_tagline":"Структурированные инструкции для AI как генетический код. — <a href=\"https://github.com/ilang-ai/ilang-spec\">Спецификация</a> · <a href=\"https://github.com/ilang-ai/TelegramGuard\">Исходники</a> · <a href=\"https://t.me/iLangGuardBot\">Telegram</a>"},"es":{"nav_cap":"Funciones","nav_setup":"Instalación","nav_os":"Código abierto","nav_selfhost":"Autoalojamiento","cta_add":"Añadir a Telegram","hero_badge":"SIN CONFIGURACIÓN · GRATIS PARA SIEMPRE · MIT","hero_lead":"El guardián con IA que mantiene limpios tus grupos de Telegram — y de verdad responde a tus preguntas.","hero_sub":"Antispam. Visión. Chat. Sin configuración. Código abierto.","hero_cta_add":"⚡ Añadir a Telegram","hero_cta_gh":"GitHub →","stat1_val":"0-config","stat1_label":"para desplegar","stat2_label":"para siempre","stat3_label":"código abierto","stat4_label":"sin ataduras","cap_eyebrow":"Funciones","cap_h2":"Protege tu grupo, gratis para siempre","cap1_h3":"Antispam","cap1_p":"La IA detecta anuncios, estafas y spam de criptomonedas &amp; apuestas. Ve a través de los caracteres Unicode parecidos, los trucos de ancho completo y ancho cero, el relleno de emojis y la jerga. Un prefiltro de coste cero elimina lo evidente antes de que siquiera llegue a la IA.","cap2_h3":"Visión","cap2_p":"Lee imágenes y miniaturas de vídeo, detecta anuncios en imágenes y estafas con códigos QR. En el chat, interpreta la historia detrás de la foto, no solo los píxeles.","cap3_h3":"Chat útil","cap3_p":"Menciona al bot con @ en cualquier grupo. Multilingüe — responde en tu propio idioma. Haz una pregunta y obtén una respuesta clara y útil, no una evasiva prefabricada.","setup_eyebrow":"Sin configuración","setup_h2":"Añádelo. Listo.","step1_h3":"Añádelo a tu grupo","step1_p":"Busca <code>@iLangGuardBot</code> en Telegram y añádelo. Sin instalación, sin configuración, sin coste.","step2_h3":"Dale permisos de administrador","step2_p":"Activa \"eliminar mensajes\" y \"expulsar usuarios\". Ese es el único ajuste que necesita.","step3_h3":"Funciona","step3_p":"El spam se elimina automáticamente. Menciónalo con @ en cualquier momento para preguntarle. No tienes que hacer nada más.","os_eyebrow":"Código abierto","os_h2":"Impulsado por I-Lang,<br>listo para tu fork","os_p":"El cerebro del bot vive en simples archivos <code>.ilang</code> — instrucciones de IA estructuradas donde cada <code>::GENE</code> define un comportamiento. Cambia los genes, cambia el bot. Licencia MIT, autoalojable, sin ataduras a proveedores.","os_link":"Conoce la I-Lang Spec →","sh_eyebrow":"Autoalojamiento","sh_h2":"Ejecuta el tuyo","sh_p":"Usa cualquier proveedor de IA compatible con OpenAI (SiliconFlow, OpenAI, DeepSeek o un modelo local). Configura el token de tu bot y tu clave, y ejecútalo.","sh1_tag":"Recomendado","sh1_p":"Sin servidor, escalado automático, modo webhook, siempre activo.","sh2_p":"Clona, instala, define 2 variables de entorno y ejecútalo como servicio.","sh3_tag":"Gratis","sh3_p":"Descarga el repositorio, compila, define las variables y arráncalo.","foot_brand":"Impulsado por I-Lang Prompt Spec","foot_tagline":"Instrucciones de IA estructuradas como código genético. — <a href=\"https://github.com/ilang-ai/ilang-spec\">Spec</a> · <a href=\"https://github.com/ilang-ai/TelegramGuard\">Código</a> · <a href=\"https://t.me/iLangGuardBot\">Telegram</a>"},"ar":{"nav_cap":"الإمكانات","nav_setup":"الإعداد","nav_os":"مفتوح المصدر","nav_selfhost":"الاستضافة الذاتية","cta_add":"أضِفه إلى تيليجرام","hero_badge":"بلا إعداد · مجاني للأبد · MIT","hero_lead":"الحارس الذكي الذي يُبقي مجموعات تيليجرام نظيفة — ويجيب فعلاً عن أسئلتك.","hero_sub":"حماية من السبام. رؤية. محادثة. بلا إعداد. مفتوح المصدر.","hero_cta_add":"⚡ أضِفه إلى تيليجرام","hero_cta_gh":"GitHub ←","stat1_val":"بلا إعداد","stat1_label":"للنشر","stat2_label":"للأبد","stat3_label":"مفتوح المصدر","stat4_label":"بلا احتكار","cap_eyebrow":"الإمكانات","cap_h2":"يحمي مجموعتك، مجاناً للأبد","cap1_h3":"مكافحة السبام","cap1_p":"يرصد الذكاء الاصطناعي الإعلانات وعمليات الاحتيال وسبام العملات المشفّرة &amp; المقامرة. يكشف حِيَل محارف يونيكود المتشابهة، والمسافات كاملة العرض وعديمة العرض، وحشو الرموز التعبيرية والعامية. ومرشّح أوّلي بلا تكلفة يقضي على الواضح منها قبل أن يصل إلى الذكاء الاصطناعي.","cap2_h3":"الرؤية","cap2_p":"يقرأ الصور ومصغّرات الفيديو، ويلتقط الإعلانات المصوّرة وعمليات الاحتيال عبر رموز QR. وفي المحادثة، يقرأ القصة الكامنة خلف الصورة، لا مجرد وحدات البكسل.","cap3_h3":"محادثة مفيدة","cap3_p":"أشِر إلى البوت بعلامة @ في أي مجموعة. متعدّد اللغات — يردّ بلغتك أنت. اطرح سؤالاً واحصل على إجابة واضحة ومفيدة، لا ردّاً جاهزاً متهرّباً.","setup_eyebrow":"بلا إعداد","setup_h2":"أضِفه. وانتهى الأمر.","step1_h3":"أضِفه إلى مجموعتك","step1_p":"ابحث عن <code>@iLangGuardBot</code> في تيليجرام وأضِفه. بلا تثبيت، بلا إعداد، بلا تكلفة.","step2_h3":"امنحه صلاحية المشرف","step2_p":"فعِّل \"حذف الرسائل\" و\"حظر المستخدمين\". هذا هو المفتاح الوحيد الذي يحتاجه.","step3_h3":"يعمل تلقائياً","step3_p":"يُنظَّف السبام تلقائياً. أشِر إليه بعلامة @ في أي وقت بسؤالك. ولا تفعل شيئاً آخر.","os_eyebrow":"مفتوح المصدر","os_h2":"مدعوم بـ I-Lang،<br>ولك حرية تفريعه","os_p":"يقبع عقل البوت في ملفات <code>.ilang</code> بسيطة — تعليمات ذكاء اصطناعي مُنظَّمة، حيث يُعرّف كل <code>::GENE</code> سلوكاً. غيِّر الجينات، يتغيّر البوت. مُرخَّص بموجب MIT، وقابل للاستضافة الذاتية، وبلا ارتباط بمزوّد.","os_link":"تعرّف على مواصفة I-Lang ←","sh_eyebrow":"الاستضافة الذاتية","sh_h2":"شغِّل نسختك الخاصة","sh_p":"استخدم أي مزوّد ذكاء اصطناعي متوافق مع OpenAI (SiliconFlow أو OpenAI أو DeepSeek أو نموذجاً محلياً). اضبط رمز البوت والمفتاح، ثم شغّله.","sh1_tag":"موصى به","sh1_p":"بلا خوادم، توسّع تلقائي، وضع webhook، وجاهز دائماً.","sh2_p":"استنسخ، ثبِّت، اضبط متغيّرَي بيئة، وشغّله كخدمة.","sh3_tag":"مجاني","sh3_p":"اسحب المستودع، ابنِ، اضبط البيئة، وشغّله.","foot_brand":"مدعوم بـ I-Lang Prompt Spec","foot_tagline":"تعليمات ذكاء اصطناعي مُنظَّمة كشيفرة جينية. — <a href=\"https://github.com/ilang-ai/ilang-spec\">المواصفة</a> · <a href=\"https://github.com/ilang-ai/TelegramGuard\">المصدر</a> · <a href=\"https://t.me/iLangGuardBot\">تيليجرام</a>"},"fa":{"nav_cap":"قابلیت‌ها","nav_setup":"راه‌اندازی","nav_os":"متن‌باز","nav_selfhost":"میزبانی شخصی","cta_add":"افزودن به تلگرام","hero_badge":"بدون تنظیمات · همیشه رایگان · MIT","hero_lead":"نگهبان هوش مصنوعی که گروه‌های تلگرام شما را پاک نگه می‌دارد — و واقعاً به پرسش‌هایتان پاسخ می‌دهد.","hero_sub":"ضد اسپم. بینایی. گفت‌وگو. بدون تنظیمات. متن‌باز.","hero_cta_add":"⚡ افزودن به تلگرام","hero_cta_gh":"GitHub ←","stat1_val":"بدون تنظیمات","stat1_label":"برای استقرار","stat2_label":"برای همیشه","stat3_label":"متن‌باز","stat4_label":"بدون وابستگی","cap_eyebrow":"قابلیت‌ها","cap_h2":"از گروه شما محافظت می‌کند، برای همیشه رایگان","cap1_h3":"ضد اسپم","cap1_p":"هوش مصنوعی تبلیغات، کلاهبرداری‌ها و اسپم رمزارز &amp; قمار را می‌گیرد. از پس کاراکترهای مشابه یونیکد، ترفندهای تمام‌عرض و بی‌عرض، پُرکردن با ایموجی و زبان کوچه‌بازاری برمی‌آید. یک پیش‌فیلتر بی‌هزینه موارد آشکار را پیش از رسیدن به هوش مصنوعی حذف می‌کند.","cap2_h3":"بینایی","cap2_p":"تصاویر و بندانگشتی ویدیوها را می‌خواند، تبلیغات تصویری و کلاهبرداری‌های کد QR را می‌گیرد. در گفت‌وگو، داستان پشت عکس را می‌خواند، نه فقط پیکسل‌ها را.","cap3_h3":"گفت‌وگوی سودمند","cap3_p":"در هر گروهی ربات را @ کنید. چندزبانه — به زبان خودتان پاسخ می‌دهد. پرسشی بپرسید و پاسخی روشن و کاربردی بگیرید، نه یک طفره‌ی کلیشه‌ای.","setup_eyebrow":"بدون راه‌اندازی","setup_h2":"اضافه‌اش کنید. تمام.","step1_h3":"به گروه‌تان اضافه کنید","step1_p":"در تلگرام <code>@iLangGuardBot</code> را جست‌وجو کرده و اضافه کنید. بدون نصب، بدون تنظیمات، بدون هزینه.","step2_h3":"به آن دسترسی ادمین بدهید","step2_p":"«حذف پیام‌ها» و «مسدود کردن کاربران» را روشن کنید. تنها کلیدی است که به آن نیاز دارد.","step3_h3":"کار می‌کند","step3_p":"اسپم به‌طور خودکار پاک می‌شود. هر وقت خواستید با یک پرسش آن را @ کنید. کار دیگری لازم نیست انجام دهید.","os_eyebrow":"متن‌باز","os_h2":"قدرت‌گرفته از I-Lang،<br>آماده برای فورک شما","os_p":"مغز ربات در فایل‌های ساده‌ی <code>.ilang</code> جای دارد — دستورالعمل‌های ساختارمند هوش مصنوعی که در آن‌ها هر <code>::GENE</code> یک رفتار را تعریف می‌کند. ژن‌ها را تغییر دهید، ربات را تغییر می‌دهید. با مجوز MIT، قابل میزبانی شخصی، بدون وابستگی به فروشنده.","os_link":"آشنایی با مشخصات I-Lang ←","sh_eyebrow":"میزبانی شخصی","sh_h2":"نسخه‌ی خودتان را اجرا کنید","sh_p":"هر ارائه‌دهنده‌ی هوش مصنوعی سازگار با OpenAI را بیاورید (SiliconFlow، OpenAI، DeepSeek، یا یک مدل محلی). توکن و کلید ربات‌تان را تنظیم کنید و اجرا کنید.","sh1_tag":"پیشنهادی","sh1_p":"بدون سرور، مقیاس‌پذیری خودکار، حالت وب‌هوک، همیشه آماده.","sh2_p":"کلون کنید، نصب کنید، ۲ متغیر محیطی تنظیم کنید، به‌عنوان سرویس اجرا کنید.","sh3_tag":"رایگان","sh3_p":"مخزن را دریافت کنید، بسازید، محیط را تنظیم کنید، بالا بیاورید.","foot_brand":"قدرت‌گرفته از I-Lang Prompt Spec","foot_tagline":"دستورالعمل‌های ساختارمند هوش مصنوعی همچون کد ژنتیکی. — <a href=\"https://github.com/ilang-ai/ilang-spec\">مشخصات</a> · <a href=\"https://github.com/ilang-ai/TelegramGuard\">منبع</a> · <a href=\"https://t.me/iLangGuardBot\">تلگرام</a>"}};
+  var RTL = {ar:1, fa:1};
+  var nodes = document.querySelectorAll('[data-i18n]');
+  var EN = {};
+  nodes.forEach(function(el){ EN[el.getAttribute('data-i18n')] = el.innerHTML; });
+  var sel = document.getElementById('langSel');
+  function apply(lang){
+    if(lang !== 'en' && !I18N[lang]) lang = 'en';
+    var d = I18N[lang] || {};
+    nodes.forEach(function(el){
+      var k = el.getAttribute('data-i18n');
+      el.innerHTML = (d[k] != null ? d[k] : EN[k]);
+    });
+    var root = document.documentElement;
+    root.setAttribute('lang', lang);
+    root.setAttribute('dir', RTL[lang] ? 'rtl' : 'ltr');
+    try{ localStorage.setItem('abLang', lang); }catch(e){}
+    if(sel) sel.value = lang;
+  }
+  var stored = null;
+  try{ stored = localStorage.getItem('abLang'); }catch(e){}
+  var init = stored;
+  if(!init){
+    var n = (navigator.language || 'en').slice(0,2).toLowerCase();
+    init = (n === 'en' || I18N[n]) ? n : 'en';
+  }
+  apply(init || 'en');
+  if(sel) sel.addEventListener('change', function(e){ apply(e.target.value); });
+})();
+</script>
 
 </body>
 </html>

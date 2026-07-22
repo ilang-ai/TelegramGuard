@@ -10,7 +10,7 @@
 [![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#自己部署)
 
-**[English](README.md)** · **[中文](README_CN.md)** · **[antispam.bot](https://antispam.bot)**
+🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
 
 </div>
 
