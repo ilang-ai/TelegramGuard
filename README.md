@@ -15,12 +15,11 @@ tags:
 
 <div align="center">
 
-# 🛡️ TelegramGuard
+# 🛡️ antispam.bot
 
-**The open-source engine behind [antispam.bot](https://antispam.bot)**
+**The AI guardian that keeps your Telegram groups clean — and actually answers your questions.**
 
-The AI guardian that keeps your Telegram groups clean — and actually answers your questions.
-Zero config, free forever, self-hostable.
+Open source (MIT), zero config, self-hostable — the **TelegramGuard** project.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)

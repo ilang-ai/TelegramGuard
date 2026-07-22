@@ -1,11 +1,10 @@
 <div align="center">
 
-# 🛡️ TelegramGuard
+# 🛡️ antispam.bot
 
-**[antispam.bot](https://antispam.bot) 背后的开源引擎**
+**守护你电报群的 AI —— 自动清垃圾广告,还能真正回答问题。**
 
-守护你电报群的 AI —— 自动清垃圾广告,还能真正回答问题。
-零配置、永久免费、可自托管。
+开源(MIT)、零配置、可自托管 —— 项目代号 **TelegramGuard**。
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
