@@ -351,8 +351,12 @@
   try{ stored = localStorage.getItem('abLang'); }catch(e){}
   var init = stored;
   if(!init){
-    var n = (navigator.language || 'en').slice(0,2).toLowerCase();
-    init = (n === 'en' || I18N[n]) ? n : 'en';
+    var prefs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    for(var i=0;i<prefs.length;i++){
+      var n = (prefs[i] || '').slice(0,2).toLowerCase();
+      if(n === 'en' || I18N[n]){ init = n; break; }
+    }
+    if(!init) init = 'en';
   }
   apply(init || 'en');
   if(sel) sel.addEventListener('change', function(e){ apply(e.target.value); });
