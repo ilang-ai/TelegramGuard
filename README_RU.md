@@ -98,6 +98,8 @@ python bot.py
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | Модель для голосовых сообщений |
 | `AI_IMAGE_MAX_WIDTH` | `600` | Ширина уменьшения изображения перед вызовами зрения |
 | `LEXICON_HARD_THRESHOLD` | `6` | Строгость предфильтра сленга (выше = строже) |
+| `PROBE_FLAG_DELETE` | `2` | Сколько меток «отметился» до начала удаления (никогда не банит) |
+| `PROBE_WINDOW_HOURS` | `24` | Скользящее окно для этих меток (часы) |
 
 ---
 
@@ -142,6 +144,7 @@ TelegramGuard/
 │   ├── chat.py            Prompt orchestration (loads .ilang)
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
+│   ├── probe.py           Обнаружение флуда «отметился» (только метки, без банов)
 │   ├── ilang_judge.py     I-Lang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock

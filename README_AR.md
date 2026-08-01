@@ -98,6 +98,8 @@ python bot.py
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | نموذج الرسائل الصوتية |
 | `AI_IMAGE_MAX_WIDTH` | `600` | عرض التصغير قبل استدعاءات الرؤية |
 | `LEXICON_HARD_THRESHOLD` | `6` | صرامة المرشّح الأوّلي للعامية (الأعلى = أكثر صرامة) |
+| `PROBE_FLAG_DELETE` | `2` | عدد علامات رسائل «الحضور» قبل بدء الحذف (لا يحظر أبدًا) |
+| `PROBE_WINDOW_HOURS` | `24` | النافذة المتحركة لتلك العلامات (بالساعات) |
 
 ---
 
@@ -142,6 +144,7 @@ TelegramGuard/
 │   ├── chat.py            Prompt orchestration (loads .ilang)
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
+│   ├── probe.py           كشف رسائل «الحضور» (تعليم فقط، بلا حظر)
 │   ├── ilang_judge.py     I-Lang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock

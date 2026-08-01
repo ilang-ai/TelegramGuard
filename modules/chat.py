@@ -4,6 +4,7 @@ import random
 import os
 
 from modules import ai_provider
+from modules import lexicon
 import config
 
 logger = logging.getLogger(__name__)
@@ -90,10 +91,34 @@ def _deflect():
 
 
 def _is_spam(raw):
-    """Parse a spam-judge reply. Fixes the old `"spam" in result` substring bug
-    (a wordy 'not spam' would count as spam). Expects the model to answer spam/ok."""
-    s = (raw or "").strip().lower().lstrip("\"'`* ")
-    return s.startswith("spam") or s.startswith("yes")
+    """Parse a spam-judge reply into True / False / None (couldn't parse it).
+
+    Fixes the old `"spam" in result` substring bug (a wordy 'not spam' counted as
+    spam) and the fail-open that replaced it: anything not starting with spam/yes
+    silently meant "clean", so a model that prefixes its answer ("Based on the
+    above, yes") or gets truncated inside that preamble was a free pass.
+    None means unparseable — callers fall back to the lexicon instead of letting
+    the message through.
+    """
+    s = (raw or "").strip().lower().lstrip("\"'`*# 　")
+    if not s:
+        return None
+    if s.startswith(("spam", "yes", "y,", "违规", "是", "有")) or s == "y":
+        return True
+    if s.startswith(("ok", "no", "n,", "not ", "clean", "正常", "否", "不是", "无")) or s == "n":
+        return False
+    return None
+
+
+def _lexicon_fallback(text):
+    """Used when the verdict is unparseable or the API call failed: fall back to
+    a lexicon hard hit rather than silently letting the message through."""
+    try:
+        s, _ = lexicon.score(text or "")
+        return s >= getattr(config, "LEXICON_HARD_THRESHOLD", 6)
+    except Exception as e:
+        logger.warning("lexicon fallback failed: " + str(e))
+        return False
 
 
 async def ai_text(text, history=None, context_info=""):
@@ -137,24 +162,42 @@ async def ai_voice(audio_bytes, mime_type="audio/ogg", history=None, context_inf
         return ("chat", "Didn't catch that. Try again or type it out.")
 
 
-async def ai_judge_group_message(text):
+async def ai_judge_group_message(text, sender_context=""):
     try:
-        prompt = ANTISPAM_TEXT_PROMPT + "\n\nMessage content: " + text[:1000]
-        raw = await ai_provider.generate_text(prompt, max_tokens=8, temperature=0.0)
-        return _is_spam(raw)
-    except Exception:
-        return False
+        prompt = ANTISPAM_TEXT_PROMPT
+        if sender_context:
+            prompt += "\n\nSender context: " + sender_context
+        prompt += "\n\nMessage content: " + text[:1000]
+        # max_tokens 32, not 8: eight tokens is enough to truncate the answer
+        # inside a preamble ("Based on the above,"), which leaves nothing to
+        # parse and drops the judgement down to the lexicon for no reason.
+        raw = await ai_provider.generate_text(prompt, max_tokens=32, temperature=0.0)
+        verdict = _is_spam(raw)
+        if verdict is None:  # unparseable — don't let it through silently
+            logger.warning("spam text verdict unparseable: " + repr((raw or "")[:80]) + " — falling back to lexicon")
+            return _lexicon_fallback(text)
+        return verdict
+    except Exception as e:
+        logger.warning("spam text judge failed, falling back to lexicon: " + str(e))
+        return _lexicon_fallback(text)
 
 
-async def ai_judge_group_image(image_bytes, caption=""):
+async def ai_judge_group_image(image_bytes, caption="", sender_context=""):
     try:
         prompt = ANTISPAM_TEXT_PROMPT + "\n\nJudge this image. Reply ONLY: spam or ok."
+        if sender_context:
+            prompt += "\nSender context: " + sender_context
         if caption:
             prompt += "\nCaption: " + caption[:500]
-        raw = await ai_provider.generate_vision(prompt, image_bytes, max_tokens=8, temperature=0.0)
-        return _is_spam(raw)
-    except Exception:
-        return False
+        raw = await ai_provider.generate_vision(prompt, image_bytes, max_tokens=32, temperature=0.0)
+        verdict = _is_spam(raw)
+        if verdict is None:  # same as above — no silent pass
+            logger.warning("spam image verdict unparseable: " + repr((raw or "")[:80]) + " — falling back to lexicon")
+            return _lexicon_fallback(caption)
+        return verdict
+    except Exception as e:
+        logger.warning("spam image judge failed, falling back to lexicon: " + str(e))
+        return _lexicon_fallback(caption)
 
 
 async def ai_group_vision(image_bytes, caption="", history=None):

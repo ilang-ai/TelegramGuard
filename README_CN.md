@@ -98,6 +98,8 @@ python bot.py
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | 语音模型 |
 | `AI_IMAGE_MAX_WIDTH` | `600` | 识图前压缩宽度 |
 | `LEXICON_HARD_THRESHOLD` | `6` | 黑话预过滤严格度(越高越严) |
+| `PROBE_FLAG_DELETE` | `2` | 签到水消息累计多少次后开始静默删除(绝不封号) |
+| `PROBE_WINDOW_HOURS` | `24` | 上述标记的滚动有效窗口(小时) |
 
 ---
 
@@ -142,6 +144,7 @@ TelegramGuard/
 │   ├── chat.py            提示词编排(加载 .ilang)
 │   ├── prefilter.py       零成本垃圾预过滤 + 三路分诊
 │   ├── lexicon.py         黑话/规避归一化 + 打分
+│   ├── probe.py           签到水消息识别(只标记, 绝不封号)
 │   ├── ilang_judge.py     I-Lang 判定函数
 │   ├── admin.py           群管理
 │   ├── db.py              SQLite 共享连接 + 异步锁

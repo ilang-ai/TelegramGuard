@@ -30,6 +30,13 @@ async def init_db():
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (chat_id, user_id)
             );
+            CREATE TABLE IF NOT EXISTS probe_flags (
+                chat_id INTEGER,
+                user_id INTEGER,
+                flags INTEGER DEFAULT 0,
+                window_start TIMESTAMP,
+                PRIMARY KEY (chat_id, user_id)
+            );
             CREATE TABLE IF NOT EXISTS tos_consent (
                 chat_id INTEGER PRIMARY KEY,
                 accepted_by INTEGER,

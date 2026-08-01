@@ -98,6 +98,8 @@ python bot.py
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | مدل پیام صوتی |
 | `AI_IMAGE_MAX_WIDTH` | `600` | کاهش عرض تصویر پیش از فراخوانی‌های بینایی |
 | `LEXICON_HARD_THRESHOLD` | `6` | سخت‌گیری پیش‌فیلتر زبان کوچه‌بازاری (بالاتر = سخت‌گیرانه‌تر) |
+| `PROBE_FLAG_DELETE` | `2` | تعداد نشانه‌های پیام «حضور» پیش از حذف خودکار (هرگز مسدود نمی‌کند) |
+| `PROBE_WINDOW_HOURS` | `24` | بازهٔ چرخشی برای این نشانه‌ها (ساعت) |
 
 ---
 
@@ -142,6 +144,7 @@ TelegramGuard/
 │   ├── chat.py            Prompt orchestration (loads .ilang)
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
+│   ├── probe.py           تشخیص پیام‌های «حضور» (فقط نشانه‌گذاری، بدون مسدودسازی)
 │   ├── ilang_judge.py     I-Lang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock

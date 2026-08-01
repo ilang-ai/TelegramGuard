@@ -98,6 +98,8 @@ Todo se configura mediante variables de entorno — consulta [`.env.example`](.e
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | Modelo para mensajes de voz |
 | `AI_IMAGE_MAX_WIDTH` | `600` | Ancho de reducción antes de las llamadas de visión |
 | `LEXICON_HARD_THRESHOLD` | `6` | Rigor del prefiltro de jerga (mayor = más estricto) |
+| `PROBE_FLAG_DELETE` | `2` | Marcas de relleno tipo «presente» antes de borrar (nunca banea) |
+| `PROBE_WINDOW_HOURS` | `24` | Ventana móvil para esas marcas (horas) |
 
 ---
 
@@ -142,6 +144,7 @@ TelegramGuard/
 │   ├── chat.py            Prompt orchestration (loads .ilang)
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
+│   ├── probe.py           Detección de relleno tipo «presente» (solo marca, nunca banea)
 │   ├── ilang_judge.py     I-Lang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock

@@ -114,6 +114,8 @@ Everything is set via environment variables — see [`.env.example`](.env.exampl
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | Voice-message model |
 | `AI_IMAGE_MAX_WIDTH` | `600` | Downscale width before vision calls |
 | `LEXICON_HARD_THRESHOLD` | `6` | Slang pre-filter strictness (higher = stricter) |
+| `PROBE_FLAG_DELETE` | `2` | Check-in filler flags before it starts deleting (never bans) |
+| `PROBE_WINDOW_HOURS` | `24` | Rolling window for those flags |
 
 ---
 
@@ -158,6 +160,7 @@ TelegramGuard/
 │   ├── chat.py            Prompt orchestration (loads .ilang)
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
+│   ├── probe.py           Check-in filler detection (mark-only, never bans)
 │   ├── ilang_judge.py     I-Lang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock

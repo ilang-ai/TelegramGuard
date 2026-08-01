@@ -25,5 +25,12 @@ SPAM_REPEAT_WINDOW = int(os.environ.get("SPAM_REPEAT_WINDOW", "300"))
 # Chinese-slang lexicon hard-hit threshold (prefilter Layer 2.5). Higher = stricter.
 LEXICON_HARD_THRESHOLD = int(os.environ.get("LEXICON_HARD_THRESHOLD", "6"))
 
+# Probe ("check-in") detection. Mark-only layer: it never bans, it only starts
+# silently deleting once a member has been flagged this many times...
+PROBE_FLAG_DELETE = int(os.environ.get("PROBE_FLAG_DELETE", "2"))
+# ...within this rolling window (hours). Flags older than the window reset to 1,
+# so a real person posting one such message a day is never permanently silenced.
+PROBE_WINDOW_HOURS = int(os.environ.get("PROBE_WINDOW_HOURS", "24"))
+
 # Admin user ID (auto-detected from first /start)
 ADMIN_USER_ID = None

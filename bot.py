@@ -24,6 +24,7 @@ from modules.chat import (
 )
 from modules.admin import is_admin, is_bot_admin, register_group
 from modules.prefilter import prefilter
+from modules import probe
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -137,8 +138,57 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== Group ====================
 
+async def _answer_mention(msg, context, is_mention, text):
+    """Reply to someone who @mentioned the bot or replied to it.
+
+    Called only once the message is known to be clean (or from an admin) — it
+    used to run at the top of handle_group_message and return, which let any
+    spammer skip the entire anti-spam pipeline just by replying to the bot.
+    """
+    clean = text.replace("@" + context.bot.username, "").strip() if (text and is_mention) else (text.strip() if text else "")
+    g_history = context.chat_data.setdefault("group_history", [])
+    if msg.photo:
+        try:
+            f = await context.bot.get_file(msg.photo[-1].file_id)
+            img_data = bytes(await f.download_as_bytearray())
+            reply = await ai_group_vision(img_data, caption=clean, history=g_history)
+        except Exception:
+            reply = "Couldn't read that image. Try sending another one?"
+    elif msg.video:
+        if msg.video.thumbnail:
+            try:
+                vf = await context.bot.get_file(msg.video.thumbnail.file_id)
+                vimg = bytes(await vf.download_as_bytearray())
+                reply = await ai_group_vision(vimg, caption=clean, history=g_history)
+            except Exception:
+                if clean:
+                    g_history.append({"role": "user", "text": "[video] " + clean})
+                    reply = await ai_group_reply("[video] " + clean, g_history)
+                else:
+                    reply = "Couldn't read the video thumbnail. What's it about?"
+        elif clean:
+            g_history.append({"role": "user", "text": "[video] " + clean})
+            reply = await ai_group_reply("[video] " + clean, g_history)
+        else:
+            reply = "Can't process videos directly. What's it about?"
+    else:
+        g_history.append({"role": "user", "text": clean})
+        reply = await ai_group_reply(clean, g_history)
+    g_history.append({"role": "assistant", "text": reply})
+    if len(g_history) > 20:
+        g_history[:] = g_history[-20:]
+    try:
+        await msg.reply_text(reply)
+    except Exception as e:
+        logger.warning("group @mention reply failed: chat=" + str(msg.chat.id) + " err=" + str(e))
+
+
 async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.message
+    # Edited messages come in too: this used to read update.message only, which
+    # is None on an edit event, so the handler returned on its first line and
+    # "post something harmless, then edit it into an ad" bypassed everything.
+    is_edited = update.message is None and update.edited_message is not None
+    msg = update.message or update.edited_message
     if not msg:
         return
     chat_id = msg.chat.id
@@ -151,50 +201,22 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
     tos_ok = await check_tos(chat_id)
 
-    # @mention or reply to bot
+    # @mention or reply to bot — only detected here, answered at the end of the
+    # function once anti-spam has cleared the message.
     is_mention = text and context.bot.username and ("@" + context.bot.username) in text
     is_reply_to_bot = msg.reply_to_message and msg.reply_to_message.from_user and msg.reply_to_message.from_user.id == context.bot.id
     has_media = bool(msg.photo or msg.video or msg.document)
-    if (text or has_media) and (is_mention or is_reply_to_bot):
-        clean = text.replace("@" + context.bot.username, "").strip() if (text and is_mention) else (text.strip() if text else "")
-        if not tos_ok:
-            reply = "I haven't been enabled yet. Ask an admin to tap the Accept & Enable button above."
-        else:
-            g_history = context.chat_data.setdefault("group_history", [])
-            if msg.photo:
-                try:
-                    f = await context.bot.get_file(msg.photo[-1].file_id)
-                    img_data = bytes(await f.download_as_bytearray())
-                    reply = await ai_group_vision(img_data, caption=clean, history=g_history)
-                except Exception:
-                    reply = "Couldn't read that image. Try sending another one?"
-            elif msg.video:
-                if msg.video.thumbnail:
-                    try:
-                        vf = await context.bot.get_file(msg.video.thumbnail.file_id)
-                        vimg = bytes(await vf.download_as_bytearray())
-                        reply = await ai_group_vision(vimg, caption=clean, history=g_history)
-                    except Exception:
-                        if clean:
-                            g_history.append({"role": "user", "text": "[video] " + clean})
-                            reply = await ai_group_reply("[video] " + clean, g_history)
-                        else:
-                            reply = "Couldn't read the video thumbnail. What's it about?"
-                elif clean:
-                    g_history.append({"role": "user", "text": "[video] " + clean})
-                    reply = await ai_group_reply("[video] " + clean, g_history)
-                else:
-                    reply = "Can't process videos directly. What's it about?"
-            else:
-                g_history.append({"role": "user", "text": clean})
-                reply = await ai_group_reply(clean, g_history)
-            g_history.append({"role": "assistant", "text": reply})
-            if len(g_history) > 20:
-                g_history[:] = g_history[-20:]
-        await msg.reply_text(reply)
-        return
+    # An edited message is re-judged for spam but never re-answered, otherwise
+    # the bot replies again every time the user tweaks their message.
+    wants_reply = bool((text or has_media) and (is_mention or is_reply_to_bot) and not is_edited)
 
+    # ToS not accepted: guidance only. Without admin consent we take no action.
     if not tos_ok:
+        if wants_reply:
+            try:
+                await msg.reply_text("I haven't been enabled yet. Ask an admin to tap the Accept & Enable button above.")
+            except Exception as e:
+                logger.warning("group @mention reply failed: chat=" + str(chat_id) + " err=" + str(e))
         return
 
     # Admin check
@@ -213,13 +235,38 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
         user_msgs[uid] = []
     content_hash = _hashlib.md5(text.encode()).hexdigest() if text else ""
     now = _time.time()
+    # An edit carries the same message_id: replace the existing entry instead of
+    # appending a second one, so the bulk-delete list holds no duplicates and
+    # editing one message repeatedly doesn't look like flooding.
+    user_msgs[uid] = [e for e in user_msgs[uid] if e[0] != msg.message_id]
     user_msgs[uid].append((msg.message_id, content_hash, now))
     if len(user_msgs[uid]) > 20:
         user_msgs[uid] = user_msgs[uid][-20:]
 
-    # Admin bypass
+    # Admin bypass: no enforcement on admins, but still answer them.
     if is_admin_user:
+        if wants_reply:
+            await _answer_mention(msg, context, is_mention, text)
         return
+
+    # Probe ("check-in") filler: mark only, never ban. Runs before the duplicate
+    # check so repeated check-ins can't escalate into a ban.
+    try:
+        if await probe.check(msg, chat_id, uid, context.bot.username):
+            return
+    except Exception as e:
+        logger.warning("probe check failed: " + str(e))
+
+    # @mention / reply-to-bot now goes through anti-spam as well. Asking the bot
+    # a question is not an offence though — without this hint the judge reads a
+    # question addressed to it as promotion and bans the person for it.
+    sender_ctx = ""
+    if wants_reply:
+        sender_ctx = (
+            "This message is addressed to the bot (a question or a reply to it). "
+            "Asking the bot something is not a violation on its own — only call it "
+            "spam if the content really is advertising, a scam, or contact harvesting."
+        )
 
     # Duplicate message detection
     spam = False
@@ -243,30 +290,30 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 try:
                     f = await context.bot.get_file(msg.photo[-1].file_id)
                     data = bytes(await f.download_as_bytearray())
-                    spam = await ai_judge_group_image(data, text)
+                    spam = await ai_judge_group_image(data, text, sender_context=sender_ctx)
                 except Exception:
                     if text:
-                        spam = await ai_judge_group_message(text)
+                        spam = await ai_judge_group_message(text, sender_context=sender_ctx)
             elif msg.video:
                 if msg.video.thumbnail:
                     try:
                         vf = await context.bot.get_file(msg.video.thumbnail.file_id)
                         vdata = bytes(await vf.download_as_bytearray())
-                        spam = await ai_judge_group_image(vdata, text)
+                        spam = await ai_judge_group_image(vdata, text, sender_context=sender_ctx)
                     except Exception:
                         if text:
-                            spam = await ai_judge_group_message(text)
+                            spam = await ai_judge_group_message(text, sender_context=sender_ctx)
                 elif text:
-                    spam = await ai_judge_group_message(text)
+                    spam = await ai_judge_group_message(text, sender_context=sender_ctx)
                 elif msg.forward_date:
                     spam = True
             elif msg.document or msg.sticker:
                 if text:
-                    spam = await ai_judge_group_message(text)
+                    spam = await ai_judge_group_message(text, sender_context=sender_ctx)
                 elif msg.forward_date:
                     spam = True
             elif text:
-                spam = await ai_judge_group_message(text)
+                spam = await ai_judge_group_message(text, sender_context=sender_ctx)
         # verdict == "clean" → skip AI, let it through
 
     if spam:
@@ -292,6 +339,11 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 except Exception:
                     pass
         return
+
+    # Clean message (spam was handled and returned above). Only now do we answer
+    # someone who was talking to the bot.
+    if wants_reply:
+        await _answer_mention(msg, context, is_mention, text)
 
 
 # ==================== Private ====================
@@ -445,24 +497,32 @@ def main():
 
     app = Application.builder().token(config.BOT_TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).pool_timeout(30).build()
 
+    # UpdateType.MESSAGE everywhere below: once edited_message is subscribed to,
+    # every handler sees edit events too. Only the group handler wants them —
+    # anywhere else an edit would run the command or the answer a second time.
     for cmd, fn in [
         ("start", cmd_start), ("help", cmd_help), ("ban", cmd_ban),
     ]:
-        app.add_handler(CommandHandler(cmd, fn))
+        app.add_handler(CommandHandler(cmd, fn, filters=filters.UpdateType.MESSAGE))
 
     app.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
     app.add_handler(CallbackQueryHandler(handle_tos_callback, pattern="^tos_"))
 
-    # Group
+    # Group — deliberately no UpdateType filter: edits must be re-judged here.
+    # Also deliberately no ~filters.COMMAND. A command addressed to a DIFFERENT bot
+    # ("/start@OtherBot buy followers cheap") is refused by our own CommandHandlers —
+    # PTB checks the @username against this bot and returns None on a mismatch — so
+    # excluding commands here left those messages handled by nothing at all.
+    # The CommandHandlers above are registered first, so our own commands still win.
     app.add_handler(MessageHandler(
-        (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL | filters.Sticker.ALL) & filters.ChatType.GROUPS & ~filters.COMMAND,
+        (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL | filters.Sticker.ALL) & filters.ChatType.GROUPS,
         handle_group_message
     ))
 
     # Private
-    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND, handle_private_text))
-    app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, handle_private_photo))
-    app.add_handler(MessageHandler(filters.VOICE & filters.ChatType.PRIVATE, handle_private_voice))
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND & filters.UpdateType.MESSAGE, handle_private_text))
+    app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE, handle_private_photo))
+    app.add_handler(MessageHandler(filters.VOICE & filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE, handle_private_voice))
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -481,7 +541,10 @@ def main():
             url_path="webhook",
             webhook_url=webhook_url + "/webhook",
             drop_pending_updates=True,
-            allowed_updates=["message", "callback_query", "my_chat_member"],
+            # edited_message: without subscribing, Telegram never sends edit
+            # events at all and "post something harmless, then edit it into an
+            # ad" walks straight past the anti-spam pipeline.
+            allowed_updates=["message", "edited_message", "callback_query", "my_chat_member"],
         )
     else:
         # Polling mode: run AI test first, then start
@@ -503,7 +566,9 @@ def main():
         logger.info("I-Lang Guard starting (polling mode)")
         app.run_polling(
             drop_pending_updates=True,
-            allowed_updates=["message", "callback_query", "my_chat_member"],
+            # See the webhook branch above — edited_message must be subscribed
+            # to or edits bypass anti-spam entirely.
+            allowed_updates=["message", "edited_message", "callback_query", "my_chat_member"],
             bootstrap_retries=10
         )
 
