@@ -116,6 +116,9 @@ Everything is set via environment variables — see [`.env.example`](.env.exampl
 | `LEXICON_HARD_THRESHOLD` | `6` | Slang pre-filter strictness (higher = stricter) |
 | `PROBE_FLAG_DELETE` | `2` | Check-in filler flags before it starts deleting (never bans) |
 | `PROBE_WINDOW_HOURS` | `24` | Rolling window for those flags |
+| `JUDGE_TEXT_LIMIT` | `1800` | Chars of a long message the judge sees (head + tail) |
+| `JUDGE_CAPTION_LIMIT` | `900` | Same, for image captions |
+| `GROUP_CMD_COOLDOWN` | `60` | Cooldown (s) on public group commands for non-admins |
 
 ---
 

@@ -97,24 +97,39 @@ async def add_flag(chat_id, user_id):
         return row[0] if row else 0
 
 
+# check() return values. Both are truthy, so "was this a probe?" stays a plain
+# boolean test; the caller only needs to tell them apart to decide whether the
+# message still exists (DELETED means the rest of the handler chain must not try
+# to reply to it).
+FLAGGED = "flagged"
+DELETED = "deleted"
+
+
 async def check(msg, chat_id, user_id, my_username=""):
-    """Flag a probe message. Returns True if this message was one (caller stops).
+    """Flag a probe message. Returns FLAGGED / DELETED, or None if not a probe.
 
     Judges msg.text only, never captions: a caption hit would delete the photo
     along with it, which is a visible accident. Admins never reach this — the
     caller returns for them before calling in.
     """
     if not msg.text:
-        return False
-    if not (looks_like_probe(msg.text) or looks_like_foreign_start(msg.text, my_username)):
-        return False
+        return None
+    is_foreign_start = looks_like_foreign_start(msg.text, my_username)
+    if not (looks_like_probe(msg.text) or is_foreign_start):
+        return None
     flags = await add_flag(chat_id, user_id)
     logger.info("PROBE flag: user=" + str(user_id) + " chat=" + str(chat_id) +
                 " flags=" + str(flags) + " text=" + msg.text[:20])
-    if flags >= getattr(config, "PROBE_FLAG_DELETE", 2):
+    # A foreign /start goes on the first hit, not on the threshold. Check-in
+    # filler earns a free pass because a real member may post it once without
+    # meaning anything by it; announcing another bot in a group does not happen
+    # by accident. Observed in the wild: two throwaway accounts posting it once
+    # each — under a threshold of 2 neither would ever have been touched.
+    if is_foreign_start or flags >= getattr(config, "PROBE_FLAG_DELETE", 2):
         # Mark-only layer: delete quietly, never ban, never warn.
         try:
             await msg.delete()
+            return DELETED
         except Exception as e:
             logger.warning("PROBE delete failed: " + str(e))
-    return True
+    return FLAGGED

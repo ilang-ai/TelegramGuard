@@ -23,6 +23,13 @@
 ::IMMUNE{UNICODE_VARIANT, DETECT}
 # Fullwidth chars, Cyrillic lookalikes, special spaces
 
+::IMMUNE{CJK_LOOKALIKE, DETECT}
+# Look-alike Han characters swapped in: 叚 for 假, 幣 for 币, 仮 for 假.
+# The stealthiest variant — the word reads normally to a human, matches nothing.
+
+::IMMUNE{INWORD_SEPARATOR, DETECT}
+# A separator pushed into the middle of a word: 叚*币, 假-币, 假 币
+
 ::IMMUNE{EMOJI_STUFFING, DETECT}
 # Text broken up by emojis to avoid keyword filters
 
@@ -34,6 +41,9 @@
 
 ::IMMUNE{TRANSLITERATION, DETECT}
 # Pinyin, romanization, phonetic spelling to dodge filters
+
+::IMMUNE{OBFUSCATION_IS_INTENT, WEIGH}
+# Obfuscation is not just a filter to see through — it is evidence in itself.
 
 # ============================================================
 # TEXT SPAM JUDGE
@@ -50,9 +60,23 @@ Step 3 — VERDICT based on these patterns:
 - Crypto/airdrop/token + link = crypto scam
 - Sexual services / hookup = sexual spam
 - Gambling / betting / lottery = gambling spam
+- Contraband trade — counterfeit currency (假币 / 假钞 / 高仿钞), forged documents,
+  trafficked ID cards and bank cards, weapons, drugs = spam
 - Normal conversation / question / complaint / emoji / reply = OK
 - Key insight: spam often disguises as normal content. Product codes may be hidden contact info. "Discount" may mean stolen goods.
 - Key insight: normal members rarely forward product info with contact details
+
+Key test — deliberate obfuscation is itself evidence of intent:
+Someone discussing, complaining about, or asking for help identifying a sensitive
+topic has no reason to write the word with look-alike characters or a separator
+wedged into it. Doing so means the sender knows the word gets blocked — an
+admission that what they are posting is the thing that gets blocked.
+So the same word can go either way depending on how it was written:
+  "the bank seized a batch of 假币" (news, plain spelling) → ok
+  "叚*币" (three characters, no context) → spam. This is not a truncated ad, it
+  IS the complete ad — the contact detail is the poster's own profile, anyone
+  who sees it taps through and messages them privately. Leaving out the contact
+  detail is only there to dodge the filter.
 
 Reply ONLY: spam or ok. No explanation.
 

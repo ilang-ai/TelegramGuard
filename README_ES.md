@@ -100,6 +100,9 @@ Todo se configura mediante variables de entorno — consulta [`.env.example`](.e
 | `LEXICON_HARD_THRESHOLD` | `6` | Rigor del prefiltro de jerga (mayor = más estricto) |
 | `PROBE_FLAG_DELETE` | `2` | Marcas de relleno tipo «presente» antes de borrar (nunca banea) |
 | `PROBE_WINDOW_HOURS` | `24` | Ventana móvil para esas marcas (horas) |
+| `JUDGE_TEXT_LIMIT` | `1800` | Caracteres de un mensaje largo que ve el análisis (inicio + final) |
+| `JUDGE_CAPTION_LIMIT` | `900` | Lo mismo, para los pies de foto |
+| `GROUP_CMD_COOLDOWN` | `60` | Espera (s) en comandos públicos de grupo para no administradores |
 
 ---
 

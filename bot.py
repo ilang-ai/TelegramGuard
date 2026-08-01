@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, ChatMemberHandler, filters, ContextTypes
+    CallbackQueryHandler, ChatMemberHandler, filters, ContextTypes,
+    ApplicationHandlerStop
 )
 import config
 from modules.db import db_exec
@@ -85,6 +86,30 @@ async def _handle_ai_result(intent, reply, msg, user_id, context):
 
 # ==================== Commands ====================
 
+async def _group_cmd_allowed(update, context):
+    """Rate-limit publicly callable commands inside a group.
+
+    The bot answers with reply_text, which bumps the triggering message back to
+    the top of the chat — so anyone can spam /help and have the bot repeatedly
+    bump their own ad for them, and a loop of /start makes it reprint the whole
+    ToS block. One call per chat per GROUP_CMD_COOLDOWN seconds for non-admins;
+    admins and private chats are never limited.
+    """
+    if update.effective_chat.type == "private":
+        return True
+    try:
+        if await is_admin(update, context):
+            return True
+    except Exception:
+        pass
+    key = "cmd_cd_" + str(update.effective_chat.id)
+    last = context.bot_data.get(key, 0)
+    if _time.time() - last < getattr(config, "GROUP_CMD_COOLDOWN", 60):
+        return False
+    context.bot_data[key] = _time.time()
+    return True
+
+
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not config.ADMIN_USER_ID:
         config.ADMIN_USER_ID = update.effective_user.id
@@ -100,6 +125,10 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         chat_id = update.effective_chat.id
         await register_group(chat_id, update.effective_chat.title)
+        # Rate-limited: the ToS text is a large block, and without this anyone
+        # can loop /start to make the bot flood the group with it.
+        if not await _group_cmd_allowed(update, context):
+            return
         if not await check_tos(chat_id):
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("Accept & Enable", callback_data="tos_accept_" + str(chat_id))],
@@ -118,6 +147,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Anything else → Just chat"
         )
     else:
+        if not await _group_cmd_allowed(update, context):
+            return
         await update.message.reply_text(
             "I work automatically in groups. No config needed.\n\nAdmin commands:\n/ban — Reply to a message to ban the user"
         )
@@ -137,6 +168,125 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== Group ====================
+
+async def _ban_actor(context, chat_id, sender_chat, user_id):
+    """Ban whoever is actually responsible for the message.
+
+    A message posted under a chat's identity carries a globally shared stand-in
+    user in `from` (Channel_Bot / GroupAnonymousBot); ban_chat_member on that id
+    is a permanent no-op, so a spammer wearing a channel identity could post
+    forever. The real identity is in sender_chat and needs ban_chat_sender_chat.
+    """
+    if sender_chat is not None and sender_chat.id != chat_id:
+        return await context.bot.ban_chat_sender_chat(chat_id, sender_chat.id)
+    return await context.bot.ban_chat_member(chat_id, user_id)
+
+
+async def _remind_no_permission(msg, context, chat_id):
+    """Tell admins we found spam but cannot act on it. Once per chat per hour."""
+    last = context.bot_data.get("perm_remind_" + str(chat_id), 0)
+    if _time.time() - last <= 3600:
+        return
+    context.bot_data["perm_remind_" + str(chat_id)] = _time.time()
+    try:
+        await msg.reply_text(
+            "⚠️ Detected spam but I don't have permissions to act.\n\n"
+            "Tap group name → Admins → Add Admin → Find me → Enable Delete Messages and Ban Users → Done"
+        )
+    except Exception:
+        pass
+
+
+def _poll_text(msg):
+    """A poll's visible text: the question plus every option.
+
+    A poll is prime real estate — 300 characters of question and up to 12 options
+    of 100 characters each, all sender-controlled — and none of it appears in
+    msg.text, so it used to be judged by nobody.
+    """
+    p = getattr(msg, "poll", None)
+    if not p:
+        return ""
+    parts = [p.question or ""]
+    for o in (p.options or []):
+        parts.append(getattr(o, "text", "") or "")
+    return " ".join(x for x in parts if x)
+
+
+def _media_meta(msg):
+    """Text a reader can see on a media message but that msg.text/caption lacks.
+
+    Ads live here routinely: the file name spells out a contact handle, the audio
+    title is used as ad space, the sticker set name points at a landing page, a
+    shared contact card is a phone number and a display name and nothing else.
+    """
+    out = []
+    for obj, attrs in (
+        (getattr(msg, "document", None), ("file_name",)),
+        (getattr(msg, "audio", None), ("title", "performer", "file_name")),
+        (getattr(msg, "video", None), ("file_name",)),
+        (getattr(msg, "animation", None), ("file_name",)),
+        (getattr(msg, "sticker", None), ("emoji", "set_name")),
+        (getattr(msg, "venue", None), ("title", "address")),
+        (getattr(msg, "game", None), ("title", "description")),
+        (getattr(msg, "invoice", None), ("title", "description")),
+        # No dedicated contact handler exists, so contact cards come through the
+        # normal pipeline and this is the only text they carry.
+        (getattr(msg, "contact", None), ("first_name", "last_name", "phone_number")),
+    ):
+        if obj is None:
+            continue
+        for a in attrs:
+            v = getattr(obj, a, None)
+            if v:
+                out.append(str(v))
+    return " ".join(out)
+
+
+def _hidden_text(msg, user):
+    """Attack-surface text that readers can see or tap but msg.text does not hold.
+
+    1. The URL behind a hyperlink: a text_link entity keeps its url in entities,
+       never in msg.text. "[hello everyone](spam-link)" reached the judge as two
+       harmless words.
+    2. The forward origin's title: a spammer's own channel name IS the ad, and it
+       is rendered above the message and is tappable.
+    3. The sender's display name: set first_name to an ad and every innocuous
+       message they post is advertising on their behalf.
+    """
+    out = []
+    for e in list(getattr(msg, "entities", None) or []) + list(getattr(msg, "caption_entities", None) or []):
+        u = getattr(e, "url", None)
+        if u:
+            out.append(u)
+        eu = getattr(e, "user", None)  # text_mention: a user rendered as a link
+        if eu is not None:
+            for a in ("first_name", "last_name", "username"):
+                v = getattr(eu, a, None)
+                if v:
+                    out.append(str(v))
+    fo = getattr(msg, "forward_origin", None)
+    if fo is not None:
+        for holder in (getattr(fo, "chat", None), getattr(fo, "sender_chat", None), getattr(fo, "sender_user", None)):
+            if holder is None:
+                continue
+            for a in ("title", "username", "first_name"):
+                v = getattr(holder, a, None)
+                if v:
+                    out.append(str(v))
+        v = getattr(fo, "sender_user_name", None)
+        if v:
+            out.append(str(v))
+    vb = getattr(msg, "via_bot", None)
+    if vb is not None and getattr(vb, "username", None):
+        out.append(str(vb.username))
+    if user is not None:
+        for a in ("first_name", "last_name", "username"):
+            v = getattr(user, a, None)
+            if v:
+                out.append(str(v))
+    return " ".join(out)
+
 
 async def _answer_mention(msg, context, is_mention, text):
     """Reply to someone who @mentioned the bot or replied to it.
@@ -196,6 +346,12 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     if not user:
         return
     text = msg.text or msg.caption or ""
+    # The string the judges see = the visible body plus everything a reader can
+    # see or tap that is NOT in text (link targets, forward origin, display name).
+    # Only the judging layers get it; text itself stays untouched because it is
+    # still used for @mention parsing, the probe layer and logging.
+    _hidden = _hidden_text(msg, user)
+    judge_text = (text + " " + _hidden).strip() if _hidden else text
 
     await register_group(chat_id, msg.chat.title)
 
@@ -206,9 +362,17 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     is_mention = text and context.bot.username and ("@" + context.bot.username) in text
     is_reply_to_bot = msg.reply_to_message and msg.reply_to_message.from_user and msg.reply_to_message.from_user.id == context.bot.id
     has_media = bool(msg.photo or msg.video or msg.document)
+    # Is this message a command? This handler now runs in group=-1, ahead of the
+    # CommandHandlers, so command messages reach it too. They must be excluded:
+    # "/start@ourbot" contains "@ourbotusername", so the mention check above fires
+    # and the bot would answer it with AI here while cmd_start answers it again
+    # in group 0 — one command, two replies.
+    ents = getattr(msg, "entities", None) or ()
+    is_command = bool(ents) and ents[0].type == "bot_command" and ents[0].offset == 0
     # An edited message is re-judged for spam but never re-answered, otherwise
     # the bot replies again every time the user tweaks their message.
-    wants_reply = bool((text or has_media) and (is_mention or is_reply_to_bot) and not is_edited)
+    wants_reply = bool((text or has_media) and (is_mention or is_reply_to_bot)
+                       and not is_edited and not is_command)
 
     # ToS not accepted: guidance only. Without admin consent we take no action.
     if not tos_ok:
@@ -217,20 +381,41 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 await msg.reply_text("I haven't been enabled yet. Ask an admin to tap the Accept & Enable button above.")
             except Exception as e:
                 logger.warning("group @mention reply failed: chat=" + str(chat_id) + " err=" + str(e))
+        # Plain return, never ApplicationHandlerStop: the group-0 CommandHandlers
+        # still have to run, otherwise /start can never be used to accept the ToS
+        # and the bot could never be enabled at all.
         return
 
+    # A message posted under a chat's identity (anonymous admin, channel identity)
+    # gets a globally shared stand-in user in `from` — GroupAnonymousBot
+    # (1087968824) or Channel_Bot (136817688) — with the real identity in
+    # sender_chat. Never reading sender_chat had two consequences:
+    #   1. banning called ban_chat_member on the stand-in id, which does nothing,
+    #      so a channel identity could post ads indefinitely
+    #   2. the per-user message bucket was keyed on that shared id, pooling every
+    #      channel-identity sender together, so a cleanup deleted other people's
+    #      messages
+    sender_chat = getattr(msg, "sender_chat", None)
+    # sender_chat == this group means an admin posting anonymously — an admin.
+    is_anon_admin = sender_chat is not None and sender_chat.id == chat_id
+    # An automatic forward from the linked channel is the owner's own content.
+    is_auto_forward = bool(getattr(msg, "is_automatic_forward", False))
+    # The party held responsible: bookkeeping, judging and banning all key on it.
+    actor_id = sender_chat.id if sender_chat is not None else user.id
+
     # Admin check
-    is_admin_user = False
-    try:
-        member = await context.bot.get_chat_member(chat_id, user.id)
-        if member.status in ("administrator", "creator"):
-            is_admin_user = True
-    except Exception:
-        pass
+    is_admin_user = is_anon_admin or is_auto_forward
+    if not is_admin_user:
+        try:
+            member = await context.bot.get_chat_member(chat_id, user.id)
+            if member.status in ("administrator", "creator"):
+                is_admin_user = True
+        except Exception:
+            pass
 
     # Track recent messages: (msg_id, content_hash, timestamp)
     user_msgs = context.chat_data.setdefault("user_recent_msgs", {})
-    uid = user.id
+    uid = actor_id
     if uid not in user_msgs:
         user_msgs[uid] = []
     content_hash = _hashlib.md5(text.encode()).hexdigest() if text else ""
@@ -251,11 +436,17 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
     # Probe ("check-in") filler: mark only, never ban. Runs before the duplicate
     # check so repeated check-ins can't escalate into a ban.
+    probe_result = None
     try:
-        if await probe.check(msg, chat_id, uid, context.bot.username):
-            return
+        probe_result = await probe.check(msg, chat_id, uid, context.bot.username)
     except Exception as e:
         logger.warning("probe check failed: " + str(e))
+    # ApplicationHandlerStop is raised outside the try above on purpose — it is
+    # an Exception subclass, so `except Exception` would swallow it.
+    if probe_result == probe.DELETED:
+        raise ApplicationHandlerStop
+    if probe_result:
+        return
 
     # @mention / reply-to-bot now goes through anti-spam as well. Asking the bot
     # a question is not an offence though — without this hint the judge reads a
@@ -279,9 +470,12 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
             spam = True
             logger.info("REPEAT SPAM: user=" + str(uid) + " chat=" + str(chat_id) + " count=" + str(len(recent_same)))
 
-    # Pre-filter: keyword/regex/forward/new-account (zero API cost)
+    # Pre-filter: keyword/regex/forward/new-account (zero API cost).
+    # judge_text, not text: the keyword, contact and lexicon layers have to see
+    # the hidden text too, otherwise a bare "hello everyone" hyperlinked to a spam
+    # URL passes every one of them.
     if not spam:
-        verdict = prefilter(msg, user, text)
+        verdict = prefilter(msg, user, judge_text)
         if verdict == "spam":
             spam = True
         elif verdict == "ai":
@@ -290,30 +484,77 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 try:
                     f = await context.bot.get_file(msg.photo[-1].file_id)
                     data = bytes(await f.download_as_bytearray())
-                    spam = await ai_judge_group_image(data, text, sender_context=sender_ctx)
+                    spam = await ai_judge_group_image(data, judge_text, sender_context=sender_ctx)
                 except Exception:
-                    if text:
-                        spam = await ai_judge_group_message(text, sender_context=sender_ctx)
+                    if judge_text:
+                        spam = await ai_judge_group_message(judge_text, sender_context=sender_ctx)
             elif msg.video:
                 if msg.video.thumbnail:
                     try:
                         vf = await context.bot.get_file(msg.video.thumbnail.file_id)
                         vdata = bytes(await vf.download_as_bytearray())
-                        spam = await ai_judge_group_image(vdata, text, sender_context=sender_ctx)
+                        spam = await ai_judge_group_image(vdata, judge_text, sender_context=sender_ctx)
                     except Exception:
-                        if text:
-                            spam = await ai_judge_group_message(text, sender_context=sender_ctx)
-                elif text:
-                    spam = await ai_judge_group_message(text, sender_context=sender_ctx)
-                elif msg.forward_date:
+                        if judge_text:
+                            spam = await ai_judge_group_message(judge_text, sender_context=sender_ctx)
+                elif judge_text:
+                    spam = await ai_judge_group_message(judge_text, sender_context=sender_ctx)
+                elif msg.forward_origin:
                     spam = True
-            elif msg.document or msg.sticker:
-                if text:
-                    spam = await ai_judge_group_message(text, sender_context=sender_ctx)
-                elif msg.forward_date:
-                    spam = True
+            elif msg.document or msg.sticker or msg.animation or msg.video_note:
+                # This branch used to judge the caption and nothing else, falling
+                # back to msg.forward_date — an attribute PTB no longer has, so a
+                # caption-less sticker/document/GIF raised AttributeError right
+                # here and the message was never judged, deleted or logged.
+                # And these ads are usually IN the picture, not in the caption:
+                # the sticker image is the ad, "send as file" dodges the vision
+                # judge, the file name spells out a contact handle.
+                # Now: judge the thumbnail if there is one, otherwise at least
+                # judge the metadata text.
+                thumb = None
+                if msg.sticker:
+                    # A plain .webp sticker can go to the vision judge as-is;
+                    # animated/video stickers only via their thumbnail.
+                    thumb = msg.sticker.thumbnail
+                    if not thumb and not msg.sticker.is_animated and not msg.sticker.is_video:
+                        thumb = msg.sticker
+                elif msg.animation:
+                    thumb = msg.animation.thumbnail
+                elif msg.video_note:
+                    thumb = msg.video_note.thumbnail
+                elif msg.document:
+                    thumb = msg.document.thumbnail
+                    if not thumb and (msg.document.mime_type or "").startswith("image/"):
+                        thumb = msg.document  # an image "sent as a file": judge it directly
+                # Combined, not "judge_text or metadata": judge_text is never
+                # empty (it always carries the sender's display name), so an
+                # `or` would silently discard the file name / sticker set name
+                # on every single message.
+                meta = (judge_text + " " + _media_meta(msg)).strip()
+                judged = False
+                if thumb is not None:
+                    try:
+                        tf = await context.bot.get_file(thumb.file_id)
+                        tdata = bytes(await tf.download_as_bytearray())
+                        spam = await ai_judge_group_image(tdata, meta, sender_context=sender_ctx)
+                        judged = True
+                    except Exception as e:
+                        logger.warning("media thumb judge failed: " + str(e))
+                if not judged:
+                    if meta:
+                        spam = await ai_judge_group_message(meta, sender_context=sender_ctx)
+                    elif msg.forward_origin:
+                        spam = True
+            elif msg.poll:
+                spam = await ai_judge_group_message((_poll_text(msg) + " " + _hidden).strip(), sender_context=sender_ctx)
             elif text:
-                spam = await ai_judge_group_message(text, sender_context=sender_ctx)
+                spam = await ai_judge_group_message(judge_text, sender_context=sender_ctx)
+            else:
+                # Everything else that carries sender-controlled text but no body:
+                # a shared contact card, a venue, an audio track.
+                meta = (_media_meta(msg) + " " + _hidden).strip()
+                if meta:
+                    spam = await ai_judge_group_message(meta, sender_context=sender_ctx)
         # verdict == "clean" → skip AI, let it through
 
     if spam:
@@ -322,23 +563,36 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
             for entry in user_msgs.get(uid, []):
                 mid = entry[0] if isinstance(entry, tuple) else entry
                 tasks.append(context.bot.delete_message(chat_id, mid))
-            tasks.append(context.bot.ban_chat_member(chat_id, uid))
+            n_del = len(tasks)
+            tasks.append(_ban_actor(context, chat_id, sender_chat, user.id))
             results = await asyncio.gather(*tasks, return_exceptions=True)
+            # gather(return_exceptions=True) never raises: a permission error
+            # (Forbidden) or a rate limit (RetryAfter) comes back as a VALUE in
+            # results. The old code threw the results away, so a bot without the
+            # rights logged "SPAM nuked" while the ad sat untouched in the group
+            # and the reminder branch below was unreachable dead code.
+            deleted_ok = sum(1 for r in results[:n_del]
+                             if not isinstance(r, Exception) and r is not False)
+            ban_ok = not isinstance(results[n_del], Exception)
+            errs = [r for r in results if isinstance(r, Exception)]
             user_msgs.pop(uid, None)
-            logger.info("SPAM nuked: user=" + str(uid) + " chat=" + str(chat_id) + " tasks=" + str(len(tasks)))
+            if errs and (deleted_ok == 0 or not ban_ok):
+                logger.warning(
+                    "SPAM action PARTIAL/FAILED: user=" + str(uid) + " chat=" + str(chat_id) +
+                    " deleted=" + str(deleted_ok) + "/" + str(n_del) + " ban_ok=" + str(ban_ok) +
+                    " errs=" + str([type(e).__name__ + ":" + str(e)[:60] for e in errs[:3]])
+                )
+                await _remind_no_permission(msg, context, chat_id)
+            else:
+                logger.info("SPAM nuked: user=" + str(uid) + " chat=" + str(chat_id) +
+                            " deleted=" + str(deleted_ok) + "/" + str(n_del) + " (banned)")
         except Exception as e:
             logger.warning("Anti-spam action failed: " + str(e))
-            last_remind = context.bot_data.get("perm_remind_" + str(chat_id), 0)
-            if _time.time() - last_remind > 3600:
-                context.bot_data["perm_remind_" + str(chat_id)] = _time.time()
-                try:
-                    await msg.reply_text(
-                        "\u26a0\ufe0f Detected spam but I don't have permissions to act.\n\n"
-                        "Tap group name → Admins → Add Admin → Find me → Enable Delete Messages and Ban Users → Done"
-                    )
-                except Exception:
-                    pass
-        return
+            await _remind_no_permission(msg, context, chat_id)
+        # The message is gone: stop the chain so the group-0 CommandHandlers do
+        # not reply to a deleted message. A command may carry arbitrary trailing
+        # text, so "/help <ad text>" reaches this handler AND cmd_help.
+        raise ApplicationHandlerStop
 
     # Clean message (spam was handled and returned above). Only now do we answer
     # someone who was talking to the bot.
@@ -406,6 +660,27 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
     new = result.new_chat_member.status if result.new_chat_member else "left"
 
     if old in ("left", "kicked") and new in ("member", "administrator"):
+        # Channels are not supported: the anti-spam filter is ChatType.GROUPS
+        # (which excludes CHANNEL) and allowed_updates does not subscribe to
+        # channel_post, so structurally we can never see a single post here.
+        # Running the whole ToS flow and answering with a green "enabled" tick
+        # was an empty promise — the owner would think the product works. Say so
+        # and leave instead.
+        if result.chat.type not in ("group", "supergroup"):
+            try:
+                await context.bot.send_message(
+                    chat_id,
+                    "I only support groups and supergroups — not channels. "
+                    "I can't see any content here, so keeping me around wouldn't do "
+                    "anything. Leaving now."
+                )
+            except Exception:
+                pass
+            try:
+                await context.bot.leave_chat(chat_id)
+            except Exception as e:
+                logger.warning("leave non-group chat failed: " + str(e))
+            return
         await delete_tos(chat_id)
         await register_group(chat_id, result.chat.title)
         keyboard = InlineKeyboardMarkup([
@@ -497,6 +772,13 @@ def main():
 
     app = Application.builder().token(config.BOT_TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).pool_timeout(30).build()
 
+    async def _on_error(update, context):
+        # There was no error handler at all, so an exception inside a handler
+        # left nothing but a traceback in the log: a crash halfway through the
+        # judging chain looked exactly like a clean message.
+        logger.exception("handler error: " + str(context.error))
+    app.add_error_handler(_on_error)
+
     # UpdateType.MESSAGE everywhere below: once edited_message is subscribed to,
     # every handler sees edit events too. Only the group handler wants them —
     # anywhere else an edit would run the command or the answer a second time.
@@ -513,11 +795,28 @@ def main():
     # ("/start@OtherBot buy followers cheap") is refused by our own CommandHandlers —
     # PTB checks the @username against this bot and returns None on a mismatch — so
     # excluding commands here left those messages handled by nothing at all.
-    # The CommandHandlers above are registered first, so our own commands still win.
+    #
+    # group=-1, and it has to be. PTB runs only the FIRST matching handler per
+    # group, and CommandHandler accepts arbitrary trailing text (everything after
+    # /help goes into args), so with the CommandHandlers registered first in
+    # group 0 a message like "/help buy followers cheap 加V abc" was swallowed by
+    # cmd_help and never judged at all. Running first fixes that; the handler
+    # raises ApplicationHandlerStop once it has actually deleted something, so
+    # clean messages still fall through to the group-0 command handlers.
+    #
+    # The type whitelist is gone too. TEXT|PHOTO|VIDEO|Document|Sticker meant
+    # audio, voice, video notes, polls, stories, venues, locations and dice
+    # matched no handler anywhere — an mp3 with an ad caption, or a poll whose
+    # question IS the ad, was visible to the whole group and checked by nobody.
+    # Everything in a group is now accepted, minus join/leave/pin system events.
+    # CONTACT is deliberately NOT excluded (unlike the private bot this was
+    # ported from, which has a dedicated contact handler): here nothing else
+    # would pick a shared contact card up, and a contact card is a display name
+    # plus a phone number, which is exactly what a contact-harvesting ad is.
     app.add_handler(MessageHandler(
-        (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL | filters.Sticker.ALL) & filters.ChatType.GROUPS,
+        filters.ChatType.GROUPS & ~filters.StatusUpdate.ALL,
         handle_group_message
-    ))
+    ), group=-1)
 
     # Private
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND & filters.UpdateType.MESSAGE, handle_private_text))

@@ -32,5 +32,17 @@ PROBE_FLAG_DELETE = int(os.environ.get("PROBE_FLAG_DELETE", "2"))
 # so a real person posting one such message a day is never permanently silenced.
 PROBE_WINDOW_HOURS = int(os.environ.get("PROBE_WINDOW_HOURS", "24"))
 
+# How much of an over-long message the spam judge sees. The text is clipped
+# head + tail (never head only), so an ad appended to the end of a long paste
+# still lands inside the judged range.
+JUDGE_TEXT_LIMIT = int(os.environ.get("JUDGE_TEXT_LIMIT", "1800"))
+JUDGE_CAPTION_LIMIT = int(os.environ.get("JUDGE_CAPTION_LIMIT", "900"))
+
+# Public group commands reply with reply_text, which bumps the triggering
+# message to the top of the chat. Without a cooldown anyone can spam a command
+# and have the bot repeatedly bump their own ad. Seconds, per chat, non-admins
+# only — admins and private chats are never limited.
+GROUP_CMD_COOLDOWN = int(os.environ.get("GROUP_CMD_COOLDOWN", "60"))
+
 # Admin user ID (auto-detected from first /start)
 ADMIN_USER_ID = None

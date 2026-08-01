@@ -90,6 +90,22 @@ def _deflect():
     return random.choice(lines)
 
 
+def _clip(text, limit):
+    """Keep the head AND the tail of an over-long message, not just the head.
+
+    The old text[:1000] / caption[:500] cut the message before the judge ever saw
+    it, while Telegram allows 4096 characters in one message — so pasting a news
+    article in front and appending the payload at the end hid the payload
+    completely. Taking half from each end guarantees an ad tacked onto the tail
+    lands inside the judged range.
+    """
+    t = text or ""
+    if len(t) <= limit:
+        return t
+    half = limit // 2
+    return t[:half] + "\n…(middle omitted)…\n" + t[-half:]
+
+
 def _is_spam(raw):
     """Parse a spam-judge reply into True / False / None (couldn't parse it).
 
@@ -167,7 +183,7 @@ async def ai_judge_group_message(text, sender_context=""):
         prompt = ANTISPAM_TEXT_PROMPT
         if sender_context:
             prompt += "\n\nSender context: " + sender_context
-        prompt += "\n\nMessage content: " + text[:1000]
+        prompt += "\n\nMessage content: " + _clip(text, getattr(config, "JUDGE_TEXT_LIMIT", 1800))
         # max_tokens 32, not 8: eight tokens is enough to truncate the answer
         # inside a preamble ("Based on the above,"), which leaves nothing to
         # parse and drops the judgement down to the lexicon for no reason.
@@ -188,7 +204,7 @@ async def ai_judge_group_image(image_bytes, caption="", sender_context=""):
         if sender_context:
             prompt += "\nSender context: " + sender_context
         if caption:
-            prompt += "\nCaption: " + caption[:500]
+            prompt += "\nCaption: " + _clip(caption, getattr(config, "JUDGE_CAPTION_LIMIT", 900))
         raw = await ai_provider.generate_vision(prompt, image_bytes, max_tokens=32, temperature=0.0)
         verdict = _is_spam(raw)
         if verdict is None:  # same as above — no silent pass

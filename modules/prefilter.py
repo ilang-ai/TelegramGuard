@@ -94,7 +94,10 @@ def keyword_spam(text):
 
 def forward_spam(msg):
     """Forwarded message with link/contact = spam."""
-    if not msg.forward_date:
+    # forward_origin, not forward_date: Bot API 7.0 replaced the flat forward_*
+    # fields and PTB dropped the attribute entirely, so reading msg.forward_date
+    # raises AttributeError — which crashed this filter on every message.
+    if not getattr(msg, "forward_origin", None):
         return False
     text = msg.text or msg.caption or ""
     if URL_PATTERN.search(text) or CONTACT_PATTERN.search(text):
@@ -119,6 +122,27 @@ def new_account_spam(user, text):
     if user.first_name and not any(c.isalpha() for c in user.first_name):
         suspicious += 1
     return suspicious >= 2
+
+
+def has_judgeable_media(msg):
+    """True when the message carries something a judge can actually look at.
+
+    Used to decide whether a caption-less message is worth an AI call. It is not
+    just photo/video: a sticker, a GIF, a round video and a document all have a
+    thumbnail the vision judge can read, and a poll, a shared contact, a venue or
+    an audio file all carry sender-controlled text (question and options, name
+    and phone number, file name, track title) that the text judge can read.
+
+    Voice notes, locations and dice are deliberately absent — there is no text
+    and no image on them, so an AI call would be judging the sender's display
+    name and nothing else.
+    """
+    return bool(
+        msg.photo or msg.video or msg.document or msg.sticker or
+        msg.animation or msg.video_note or msg.audio or
+        msg.poll or msg.contact or msg.venue or
+        getattr(msg, "game", None) or getattr(msg, "invoice", None)
+    )
 
 
 def should_use_ai(msg):
@@ -166,8 +190,14 @@ def prefilter(msg, user, text):
         logger.info("PREFILTER new_account_spam: user=" + str(user.id))
         return "spam"
 
-    # Layer 4: No text, no media = nothing to check
-    if not text and not msg.photo and not msg.video:
+    # Layer 4: nothing to check at all.
+    # Tested against msg, not the text argument: the caller passes a judge string
+    # that also carries hidden text (link targets, forward origin, display name),
+    # so it is practically never empty and this layer would never fire. It also
+    # used to list only photo/video, which meant every caption-less sticker,
+    # document, GIF or poll was declared clean here and the judging branches for
+    # them downstream could never run.
+    if not (msg.text or msg.caption) and not has_judgeable_media(msg):
         return "clean"
 
     # Layer 5: Rate limiter — can we afford an AI call?

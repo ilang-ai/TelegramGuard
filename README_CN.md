@@ -100,6 +100,9 @@ python bot.py
 | `LEXICON_HARD_THRESHOLD` | `6` | 黑话预过滤严格度(越高越严) |
 | `PROBE_FLAG_DELETE` | `2` | 签到水消息累计多少次后开始静默删除(绝不封号) |
 | `PROBE_WINDOW_HOURS` | `24` | 上述标记的滚动有效窗口(小时) |
+| `JUDGE_TEXT_LIMIT` | `1800` | 长消息送judge的字数(掐头去尾各一半) |
+| `JUDGE_CAPTION_LIMIT` | `900` | 同上，图片附带文字 |
+| `GROUP_CMD_COOLDOWN` | `60` | 群内公开命令对非管理员的冷却(秒) |
 
 ---
 
