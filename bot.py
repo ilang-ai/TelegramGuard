@@ -25,7 +25,7 @@ from modules.chat import (
 )
 from modules.admin import is_admin, is_bot_admin, register_group
 from modules.prefilter import prefilter
-from modules import probe
+from modules import probe, onboarding
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -391,6 +391,22 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
         # and the bot could never be enabled at all.
         return
 
+    # No admin rights means nothing we decide can be acted on, so don't decide:
+    # judging here is pure wasted AI spend. This is a real quota-drain surface —
+    # anyone can add the bot to a busy group and withhold rights (observed live:
+    # 447 "detected spam but no permission" lines from one unknown group in 24h).
+    # The rights nag runs on a timer in modules/onboarding and gives up at 10 min.
+    if not await onboarding.has_rights(context, chat_id):
+        if wants_reply:
+            try:
+                await msg.reply_text(
+                    "I don't have admin rights yet (Delete Messages + Ban Users), "
+                    "so I can't do anything here. Ask an admin to grant them."
+                )
+            except Exception:
+                pass
+        return
+
     # A message posted under a chat's identity (anonymous admin, channel identity)
     # gets a globally shared stand-in user in `from` — GroupAnonymousBot
     # (1087968824) or Channel_Bot (136817688) — with the real identity in
@@ -663,6 +679,9 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
     chat_id = result.chat.id
     old = result.old_chat_member.status if result.old_chat_member else "left"
     new = result.new_chat_member.status if result.new_chat_member else "left"
+    # This event also fires when our rights are edited, so drop the cache or we
+    # would keep using the stale answer until the TTL expires.
+    onboarding.forget_rights(chat_id)
 
     if old in ("left", "kicked") and new in ("member", "administrator"):
         # Channels are not supported: the anti-spam filter is ChatType.GROUPS
@@ -686,6 +705,19 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception as e:
                 logger.warning("leave non-group chat failed: " + str(e))
             return
+        # Already blocklisted (we gave this chat 10 minutes once and got nothing):
+        # leave without a word. Otherwise re-inviting is a free way to make the
+        # bot talk and process traffic over and over.
+        if await onboarding.is_blocked(chat_id):
+            logger.info("added to a blocklisted chat, leaving: " + str(chat_id))
+            try:
+                await context.bot.leave_chat(chat_id)
+            except Exception as e:
+                logger.warning("leaving blocklisted chat failed: " + str(e))
+            return
+        onboarding.forget_rights(chat_id)
+        # Queue the 1/2/3/5/10 minute rights nags; the last one leaves + blocklists.
+        onboarding.schedule(context, chat_id, result.chat.title or "")
         await delete_tos(chat_id)
         await register_group(chat_id, result.chat.title)
         keyboard = InlineKeyboardMarkup([
@@ -694,6 +726,8 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
         ])
         await context.bot.send_message(chat_id, TOS_TEXT, reply_markup=keyboard)
     elif old in ("member", "administrator") and new in ("left", "kicked"):
+        onboarding.cancel(context, chat_id)
+        onboarding.forget_rights(chat_id)
         await delete_tos(chat_id)
 
 
@@ -849,6 +883,7 @@ def main():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init_db())
+    loop.run_until_complete(onboarding.ensure_tables())
 
     # Detect mode: webhook (Cloud Run / Railway) or polling (VPS)
     webhook_url = os.environ.get("WEBHOOK_URL", "")
