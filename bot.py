@@ -5,7 +5,7 @@ import time as _time
 import hashlib as _hashlib
 import asyncio
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,6 +32,11 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+# httpx 会把完整请求 URL 打进 INFO 日志，而 Telegram 的 URL 里就带着 bot token：
+#   HTTP Request: POST https://api.telegram.org/bot<TOKEN>/getUpdates "HTTP/1.1 200 OK"
+# 轮询每几秒一次，实测每小时 300-400 行、一天约 8000 次明文 token 落进 journald。
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 TOS_TEXT = (
     "I-Lang Guard Terms of Service\n\n"
@@ -747,16 +752,34 @@ async def handle_tos_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 # ==================== Health Check (HF Space) ====================
 
 class HealthHandler(BaseHTTPRequestHandler):
+    # Without this, a client that opens a connection and never sends a request
+    # line blocks handle_one_request() on rfile.readline() forever. The port is
+    # public, so internet scanners do exactly that: observed in production with
+    # Recv-Q=6 against a backlog of 5 — the accept queue full of connections the
+    # server never got to, and the health check timing out while the bot itself
+    # was perfectly healthy.
+    timeout = 5
+
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"OK")
+
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except OSError:  # peer vanished / read timed out — nothing to log
+            self.close_connection = True
+
     def log_message(self, *args):
         pass
 
 def start_health_server():
     port = int(os.environ.get("PORT", 7860))
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    # Threading, not the single-threaded HTTPServer: one stalled client must not
+    # be able to wedge the whole health endpoint (see HealthHandler.timeout).
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+    server.daemon_threads = True
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     logger.info("Health check on port " + str(port))
