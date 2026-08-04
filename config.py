@@ -14,6 +14,16 @@ AI_VISION_MODELS = os.environ.get(
 AI_AUDIO_MODEL = os.environ.get("AI_AUDIO_MODEL", "Qwen/Qwen3-Omni-30B-A3B-Instruct")
 AI_IMAGE_MAX_WIDTH = int(os.environ.get("AI_IMAGE_MAX_WIDTH", "600"))
 
+# Optional second AI provider, tried only after every primary model failed.
+# Leave AI_FALLBACK_API_KEY empty and nothing changes: the chain stays exactly
+# as it was. Worth setting if you have a spare relay/vendor key -- when the
+# primary times out the judge otherwise falls back to the keyword lexicon
+# alone, which only knows the slang already in the wordlist.
+AI_FALLBACK_API_KEY = os.environ.get("AI_FALLBACK_API_KEY", "")
+AI_FALLBACK_BASE_URL = os.environ.get("AI_FALLBACK_BASE_URL", "")
+AI_FALLBACK_MODEL = os.environ.get("AI_FALLBACK_MODEL", "")
+AI_FALLBACK_VISION_MODEL = os.environ.get("AI_FALLBACK_VISION_MODEL", "")
+
 # Database
 DB_PATH = os.environ.get("DB_PATH", "/data/bot.db")
 

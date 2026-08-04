@@ -113,6 +113,9 @@ Everything is set via environment variables — see [`.env.example`](.env.exampl
 | `AI_VISION_MODELS` | `Qwen/Qwen3-VL-30B…` | Vision fallback chain (comma-separated) |
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | Voice-message model |
 | `AI_IMAGE_MAX_WIDTH` | `600` | Downscale width before vision calls |
+| `AI_FALLBACK_API_KEY` | *(empty)* | Optional second provider; set to enable a cross-vendor fallback |
+| `AI_FALLBACK_BASE_URL` | *(empty)* | Endpoint of that backup provider |
+| `AI_FALLBACK_MODEL` | *(empty)* | Text/judge model there |
 | `LEXICON_HARD_THRESHOLD` | `6` | Slang pre-filter strictness (higher = stricter) |
 | `PROBE_FLAG_DELETE` | `2` | Check-in filler flags before it starts deleting (never bans) |
 | `PROBE_WINDOW_HOURS` | `24` | Rolling window for those flags |

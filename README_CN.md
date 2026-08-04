@@ -97,6 +97,9 @@ python bot.py
 | `AI_VISION_MODELS` | `Qwen/Qwen3-VL-30B…` | 识图模型容错链(逗号分隔) |
 | `AI_AUDIO_MODEL` | `Qwen/Qwen3-Omni-30B-A3B-Instruct` | 语音模型 |
 | `AI_IMAGE_MAX_WIDTH` | `600` | 识图前压缩宽度 |
+| `AI_FALLBACK_API_KEY` | *(空)* | 可选的第二供应商;填了才启用跨供应商兜底 |
+| `AI_FALLBACK_BASE_URL` | *(空)* | 备用供应商的端点 |
+| `AI_FALLBACK_MODEL` | *(空)* | 备用供应商上的文本/判定模型 |
 | `LEXICON_HARD_THRESHOLD` | `6` | 黑话预过滤严格度(越高越严) |
 | `PROBE_FLAG_DELETE` | `2` | 签到水消息累计多少次后开始静默删除(绝不封号) |
 | `PROBE_WINDOW_HOURS` | `24` | 上述标记的滚动有效窗口(小时) |

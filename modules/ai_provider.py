@@ -13,6 +13,14 @@ Config (all via env, see config.py):
   AI_AUDIO_MODEL    — audio-capable model (optional; voice degrades gracefully)
   AI_IMAGE_MAX_WIDTH — downscale images before upload (default 600)
 
+Optional second provider, used only when the primary is unreachable:
+  AI_FALLBACK_API_KEY  — set this to enable the fallback at all
+  AI_FALLBACK_BASE_URL — endpoint of the backup relay/vendor
+  AI_FALLBACK_MODEL    — text/judge model there
+  AI_FALLBACK_VISION_MODEL — vision model there (optional; text model is
+                             reused when this is unset)
+Leave AI_FALLBACK_API_KEY empty and behaviour is exactly as before.
+
 Design: lazy client init (no network at import, no crash on missing key),
 images downscaled before upload, vision falls back down the model chain.
 """
@@ -40,20 +48,54 @@ class AIError(Exception):
     pass
 
 
-_client = None
+_clients = {}
+
+PRIMARY = "primary"
+FALLBACK = "fallback"
 
 
-def _get_client():
-    global _client
+def _get_client(which=PRIMARY):
     if AsyncOpenAI is None:
         raise AIError("openai package not installed (pip install openai)")
-    if _client is None:
-        key = getattr(config, "AI_API_KEY", "")
-        base = getattr(config, "AI_BASE_URL", "https://api.siliconflow.cn/v1")
-        if not key:
-            raise AIError("AI_API_KEY not set")
-        _client = AsyncOpenAI(api_key=key, base_url=base, timeout=90)
-    return _client
+    if which not in _clients:
+        if which == FALLBACK:
+            key = getattr(config, "AI_FALLBACK_API_KEY", "")
+            base = getattr(config, "AI_FALLBACK_BASE_URL", "")
+            if not key or not base:
+                raise AIError("fallback provider not configured")
+        else:
+            key = getattr(config, "AI_API_KEY", "")
+            base = getattr(config, "AI_BASE_URL", "https://api.siliconflow.cn/v1")
+            if not key:
+                raise AIError("AI_API_KEY not set")
+        _clients[which] = AsyncOpenAI(api_key=key, base_url=base, timeout=90)
+    return _clients[which]
+
+
+def _fallback_enabled():
+    return bool(getattr(config, "AI_FALLBACK_API_KEY", "")
+                and getattr(config, "AI_FALLBACK_BASE_URL", ""))
+
+
+def _with_fallback(models, vision=False):
+    """Append the backup provider to a model chain, if one is configured.
+
+    Entries are either "model" (primary provider) or (FALLBACK, "model").
+    Without AI_FALLBACK_API_KEY this returns the chain untouched, so the
+    default deployment behaves exactly as it did before.
+    """
+    if isinstance(models, str):
+        models = [models]
+    chain = list(models)
+    if _fallback_enabled():
+        m = ""
+        if vision:
+            m = getattr(config, "AI_FALLBACK_VISION_MODEL", "")
+        if not m:
+            m = getattr(config, "AI_FALLBACK_MODEL", "")
+        if m:
+            chain.append((FALLBACK, m))
+    return chain
 
 
 def _text_model():
@@ -100,11 +142,21 @@ def _image_part(image_bytes):
 
 
 async def _chat(models, messages, max_tokens, temperature):
-    client = _get_client()
     if isinstance(models, str):
         models = [models]
     last_err = None
-    for m in models:
+    for entry in models:
+        # entry is "model" (primary provider) or (FALLBACK, "model")
+        try:
+            if isinstance(entry, (tuple, list)):
+                which, m = entry[0], entry[1]
+            else:
+                which, m = PRIMARY, entry
+            client = _get_client(which)
+        except Exception as e:
+            last_err = e
+            logger.warning("[AI] entry %r unusable: %s, skipping", entry, e)
+            continue
         try:
             resp = await client.chat.completions.create(
                 model=m, messages=messages, max_tokens=max_tokens, temperature=temperature
@@ -115,7 +167,7 @@ async def _chat(models, messages, max_tokens, temperature):
             last_err = AIError("empty response")
         except Exception as e:
             last_err = e
-            logger.warning("[AI] model=%s failed: %s", m, e)
+            logger.warning("[AI] provider=%s model=%s failed: %s", which, m, e)
     raise AIError("all models failed: " + str(last_err))
 
 
@@ -124,7 +176,7 @@ async def generate_text(prompt, system=None, max_tokens=800, temperature=0.7):
     if system:
         msgs.append({"role": "system", "content": system})
     msgs.append({"role": "user", "content": prompt})
-    return await _chat(_text_model(), msgs, max_tokens, temperature)
+    return await _chat(_with_fallback(_text_model()), msgs, max_tokens, temperature)
 
 
 async def generate_vision(prompt, image_bytes, system=None, max_tokens=800, temperature=0.4):
@@ -135,7 +187,7 @@ async def generate_vision(prompt, image_bytes, system=None, max_tokens=800, temp
         {"type": "text", "text": prompt},
         _image_part(image_bytes),
     ]})
-    return await _chat(_vision_models(), msgs, max_tokens, temperature)
+    return await _chat(_with_fallback(_vision_models(), vision=True), msgs, max_tokens, temperature)
 
 
 async def generate_audio(prompt, audio_bytes, fmt="ogg", system=None, max_tokens=800, temperature=0.7):
