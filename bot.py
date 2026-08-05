@@ -116,8 +116,10 @@ async def _group_cmd_allowed(update, context):
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not config.ADMIN_USER_ID:
-        config.ADMIN_USER_ID = update.effective_user.id
+    # Deliberately no "first caller becomes super-admin" here. This bot is public,
+    # so that grab went to whoever happened to /start first after each restart,
+    # and it silently re-opened on every deploy. Set ADMIN_USER_ID explicitly;
+    # unset means the super-admin commands are unavailable to everyone.
     if update.effective_chat.type == "private":
         context.user_data["history"] = []
         intent, reply = await ai_text(
@@ -157,6 +159,47 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "I work automatically in groups. No config needed.\n\nAdmin commands:\n/ban — Reply to a message to ban the user"
         )
+
+
+async def cmd_groups(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Super-admin: inspect and clear the group blocklist.
+
+    Entries expire on their own after onboarding.BLOCK_DAYS, but a wrong one
+    should not need a week or a hand-edited database to undo.
+    /groups — list, /groups unblock <chat_id> — clear one.
+    """
+    if not update.effective_user or not is_bot_admin(update.effective_user.id):
+        return
+    args = context.args or []
+    if args and args[0] == "unblock":
+        if len(args) < 2:
+            await update.message.reply_text("Usage: /groups unblock <chat_id>")
+            return
+        try:
+            cid = int(args[1])
+        except ValueError:
+            await update.message.reply_text("chat_id must be a number")
+            return
+        await onboarding.unblock(cid)
+        await update.message.reply_text("Unblocked: " + str(cid))
+        return
+    from modules.db import shared_db
+    async with shared_db() as db:
+        cur = await db.execute(
+            "SELECT chat_id, title, reason, blocked_at FROM group_blocklist "
+            "ORDER BY blocked_at DESC LIMIT 20")
+        rows = await cur.fetchall()
+    if not rows:
+        await update.message.reply_text("Blocklist is empty")
+        return
+    lines = ["Blocked groups (" + str(len(rows)) + ", expire after "
+             + str(onboarding.BLOCK_DAYS) + "d):"]
+    for cid, title, reason, at in rows:
+        lines.append(str(cid) + "  " + (title or "?")[:20] + "  " + str(reason)
+                     + "  " + str(at)[:16])
+    lines.append("")
+    lines.append("Clear one: /groups unblock <chat_id>")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -397,14 +440,20 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     # 447 "detected spam but no permission" lines from one unknown group in 24h).
     # The rights nag runs on a timer in modules/onboarding and gives up at 10 min.
     if not await onboarding.has_rights(context, chat_id):
+        # Say so once in a while so someone fixes it, but not on every mention —
+        # "make the bot talk" is the same free drain in miniature, and legacy
+        # rights-less groups never go through the nag flow at all.
         if wants_reply:
-            try:
-                await msg.reply_text(
-                    "I don't have admin rights yet (Delete Messages + Ban Users), "
-                    "so I can't do anything here. Ask an admin to grant them."
-                )
-            except Exception:
-                pass
+            k = "norights_cd_" + str(chat_id)
+            if _time.time() - context.bot_data.get(k, 0) >= 600:
+                context.bot_data[k] = _time.time()
+                try:
+                    await msg.reply_text(
+                        "I don't have admin rights yet (Delete Messages + Ban Users), "
+                        "so I can't do anything here. Ask an admin to grant them."
+                    )
+                except Exception:
+                    pass
         return
 
     # A message posted under a chat's identity (anonymous admin, channel identity)
@@ -682,6 +731,12 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
     # This event also fires when our rights are edited, so drop the cache or we
     # would keep using the stale answer until the TTL expires.
     onboarding.forget_rights(chat_id)
+    # Stop nagging the moment we are out, unconditionally. Not inside the branch
+    # below: restricted -> kicked does not satisfy its `old` test, which would
+    # orphan the nags. They would then keep posting into a chat we already left,
+    # fail, and that failure would be read as "we can never speak here".
+    if new in ("left", "kicked"):
+        onboarding.cancel(context, chat_id)
 
     if old in ("left", "kicked") and new in ("member", "administrator"):
         # Channels are not supported: the anti-spam filter is ChatType.GROUPS
@@ -725,8 +780,7 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("Decline", callback_data="tos_decline_" + str(chat_id))]
         ])
         await context.bot.send_message(chat_id, TOS_TEXT, reply_markup=keyboard)
-    elif old in ("member", "administrator") and new in ("left", "kicked"):
-        onboarding.cancel(context, chat_id)
+    elif new in ("left", "kicked"):
         onboarding.forget_rights(chat_id)
         await delete_tos(chat_id)
 
@@ -841,6 +895,7 @@ def main():
     # anywhere else an edit would run the command or the answer a second time.
     for cmd, fn in [
         ("start", cmd_start), ("help", cmd_help), ("ban", cmd_ban),
+        ("groups", cmd_groups),
     ]:
         app.add_handler(CommandHandler(cmd, fn, filters=filters.UpdateType.MESSAGE))
 

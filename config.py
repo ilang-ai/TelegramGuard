@@ -54,5 +54,10 @@ JUDGE_CAPTION_LIMIT = int(os.environ.get("JUDGE_CAPTION_LIMIT", "900"))
 # only — admins and private chats are never limited.
 GROUP_CMD_COOLDOWN = int(os.environ.get("GROUP_CMD_COOLDOWN", "60"))
 
-# Admin user ID (auto-detected from first /start)
-ADMIN_USER_ID = None
+# Super-admin Telegram user ID, for /groups. Must be set explicitly: this used to
+# be claimed by whoever sent the first /start after a restart, which on a public
+# bot means a stranger, re-opened on every deploy. Unset = nobody has it.
+try:
+    ADMIN_USER_ID = int(os.environ.get("ADMIN_USER_ID", "") or 0) or None
+except ValueError:
+    ADMIN_USER_ID = None
