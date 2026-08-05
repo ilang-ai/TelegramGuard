@@ -7,11 +7,16 @@ act. A real incident: one unknown group produced 447 "detected spam but no
 permission" lines in 24 hours, every one of them a wasted AI call. That is a
 free quota-drain: add the bot to a busy group, withhold rights, watch it burn.
 
-Three layers:
+Four layers:
   1. No rights -> no AI judging at all (has_rights, cached) — kills the cost
   2. After being added, nag at 1/2/3/5/10 minutes, escalating in tone
   3. Still nothing at 10 minutes: explain, leave, and blocklist the chat, so a
      re-invite is refused instantly instead of restarting the whole cycle
+  4. Every 6 hours, sweep every known chat and feed the rights-less ones into
+     layer 2. This is what turns the first three layers from "handles new chats"
+     into "handles all chats", with nobody doing anything by hand. It covers
+     three cases at once: chats that predate this feature, nags lost to a
+     restart (the JobQueue is in memory), and rights revoked later on.
 
 "Couldn't find out" is not "no rights" — that is the central rule here. A
 getChatMember timeout, a Telegram 5xx or a flood-wait all raise, and treating
@@ -25,6 +30,7 @@ itself without anyone editing the database by hand. A super-admin can also clear
 one instantly with /groups unblock <chat_id>.
 """
 
+import asyncio
 import logging
 import time
 
@@ -45,6 +51,13 @@ MAX_RETRIES = 3
 
 # How long a blocklist entry stays in force.
 BLOCK_DAYS = 7
+
+# Full sweep: how often, how long after startup the first one runs, and how long
+# to pause between chats. The pause matters because this is a loop over every
+# chat we know — without it a large deployment would flood-limit itself.
+SWEEP_INTERVAL = 6 * 3600
+SWEEP_FIRST = 300
+SWEEP_PACE = 0.15
 
 # Do we hold enforcement rights in this chat: chat_id -> (has_rights, checked_at, ttl)
 # Calling getChatMember per message is expensive, and rights changes arrive via
@@ -107,21 +120,50 @@ def note_rights(chat_id, has_rights, ttl=_RIGHTS_TTL):
     _rights_cache[chat_id] = (bool(has_rights), time.time(), ttl)
 
 
+def _has_both(member):
+    return (member.status == "administrator"
+            and bool(getattr(member, "can_delete_messages", False))
+            and bool(getattr(member, "can_restrict_members", False)))
+
+
+async def member_state(context, chat_id):
+    """Where we stand in a chat: 'ok' / 'no' / 'gone' (not a member) / 'unknown'.
+
+    'gone' has to be its own answer: _has_both is False for left/kicked too, and
+    without the distinction the sweep would open a nag cycle against a chat we
+    already left, fail to send, and run the whole leave path again.
+    """
+    try:
+        me = await context.bot.get_chat_member(chat_id, context.bot.id)
+    except Forbidden:
+        return "gone"
+    except BadRequest as e:
+        if "chat not found" in str(e).lower():
+            return "gone"
+        logger.warning("own-rights lookup failed chat=" + str(chat_id) + ": " + str(e))
+        return "unknown"
+    except Exception as e:
+        logger.warning("own-rights lookup failed chat=" + str(chat_id) + ": " + str(e))
+        return "unknown"
+    if me.status in ("left", "kicked"):
+        return "gone"
+    return "ok" if _has_both(me) else "no"
+
+
 async def probe_rights(context, chat_id):
     """Tri-state: True (have them) / False (confirmed not) / None (couldn't tell).
 
     None must never collapse into False. Anything irreversible — leaving,
-    blocklisting — may only act on a confirmed False. Writes no cache; the caller
-    decides how to record the answer.
+    blocklisting — may only act on a confirmed False. 'gone' folds into None too:
+    there is nothing to leave or blocklist in a chat we are not in. Writes no
+    cache; the caller decides how to record the answer.
     """
-    try:
-        me = await context.bot.get_chat_member(chat_id, context.bot.id)
-    except Exception as e:
-        logger.warning("own-rights lookup failed chat=" + str(chat_id) + ": " + str(e))
-        return None
-    return (me.status == "administrator"
-            and bool(getattr(me, "can_delete_messages", False))
-            and bool(getattr(me, "can_restrict_members", False)))
+    st = await member_state(context, chat_id)
+    if st == "ok":
+        return True
+    if st == "no":
+        return False
+    return None
 
 
 async def has_rights(context, chat_id, use_cache=True):
@@ -278,6 +320,46 @@ async def _nag(context):
         pass
     cancel(context, chat_id)
     await _leave(context, chat_id, title, "no_admin_rights")
+
+
+async def _known_groups():
+    async with shared_db() as db:
+        cur = await db.execute("SELECT chat_id, title FROM groups")
+        return await cur.fetchall()
+
+
+async def sweep(context):
+    """Walk every known chat and start the nag cycle wherever we hold no rights.
+
+    Layers 2 and 3 only attach at the moment we are added, so they miss chats
+    that predate the feature and nags that a restart dropped (the JobQueue lives
+    in memory). This is the rule that closes both — nobody has to leave a group
+    by hand.
+    """
+    jq = getattr(context, "job_queue", None)
+    try:
+        rows = await _known_groups()
+    except Exception as e:
+        logger.warning("rights sweep could not read the chat list: " + str(e))
+        return
+    stat = {"ok": 0, "no": 0, "gone": 0, "unknown": 0, "busy": 0}
+    for chat_id, title in rows:
+        # Already being nagged: leave it alone, or every sweep would reset the
+        # countdown to zero and the chat would never actually be left.
+        if jq and jq.get_jobs_by_name(_job_name(chat_id)):
+            stat["busy"] += 1
+            continue
+        st = await member_state(context, chat_id)
+        stat[st] += 1
+        if st == "ok":
+            note_rights(chat_id, True)
+        elif st == "no":
+            note_rights(chat_id, False)
+            schedule(context, chat_id, title or "")
+        await asyncio.sleep(SWEEP_PACE)
+    logger.info("rights sweep done: total=" + str(len(rows)) + " ok=" + str(stat["ok"])
+                + " nag_started=" + str(stat["no"]) + " already_nagging=" + str(stat["busy"])
+                + " gone=" + str(stat["gone"]) + " unknown=" + str(stat["unknown"]))
 
 
 async def _leave(context, chat_id, title, reason, blocklist=True):

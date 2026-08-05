@@ -940,6 +940,13 @@ def main():
     loop.run_until_complete(init_db())
     loop.run_until_complete(onboarding.ensure_tables())
 
+    # Rights sweep: any chat where we hold no rights gets nagged and then left,
+    # automatically. This is what covers chats that predate the feature, nags
+    # lost to a restart, and rights revoked later — no manual cleanup.
+    if app.job_queue:
+        app.job_queue.run_repeating(onboarding.sweep, interval=onboarding.SWEEP_INTERVAL,
+                                    first=onboarding.SWEEP_FIRST, name="rights_sweep")
+
     # Detect mode: webhook (Cloud Run / Railway) or polling (VPS)
     webhook_url = os.environ.get("WEBHOOK_URL", "")
     port = int(os.environ.get("PORT", 8080))
