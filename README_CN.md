@@ -133,7 +133,7 @@ prompts_demo/
 
 改基因 = 改机器人。想自定义:复制 `prompts_demo/` 到 `prompts/`(优先加载)再编辑。
 
-**[学习 I-Lang Prompt Spec →](https://ilang.ai)**
+**[学习 I-Lang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 

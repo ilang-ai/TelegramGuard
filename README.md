@@ -149,7 +149,7 @@ prompts_demo/
 
 Change the genes, change the bot. To customize: copy `prompts_demo/` to `prompts/` (loaded first) and edit.
 
-**[Learn I-Lang Prompt Spec →](https://ilang.ai)**
+**[Learn I-Lang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 

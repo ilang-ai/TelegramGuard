@@ -130,7 +130,7 @@ prompts_demo/
 
 ژن‌ها را تغییر دهید، ربات را تغییر می‌دهید. برای سفارشی‌سازی: `prompts_demo/` را در `prompts/` کپی کنید (ابتدا بارگذاری می‌شود) و ویرایش کنید.
 
-**[آشنایی با I-Lang Prompt Spec ←](https://ilang.ai)**
+**[آشنایی با I-Lang Prompt Spec ←](https://ilang.ai/spec/)**
 
 ---
 

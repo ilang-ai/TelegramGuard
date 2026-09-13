@@ -119,7 +119,7 @@ if systemctl is-active --quiet telegramguard; then
   echo -e "${GREEN}║${NC}    journalctl -u telegramguard -f                ${GREEN}║${NC}"
   echo -e "${GREEN}║${NC}                                                  ${GREEN}║${NC}"
   echo -e "${GREEN}║${NC}  Customize: edit prompts_demo/*.ilang            ${GREEN}║${NC}"
-  echo -e "${GREEN}║${NC}  I-Lang Spec: ${CYAN}https://ilang.ai${NC}                   ${GREEN}║${NC}"
+  echo -e "${GREEN}║${NC}  I-Lang Spec: ${CYAN}https://ilang.ai/spec/${NC}             ${GREEN}║${NC}"
   echo -e "${GREEN}║${NC}                                                  ${GREEN}║${NC}"
   echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
 else

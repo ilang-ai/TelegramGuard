@@ -130,7 +130,7 @@ prompts_demo/
 
 غيِّر الجينات، يتغيّر البوت. للتخصيص: انسخ `prompts_demo/` إلى `prompts/` (تُحمَّل أولاً) وحرِّرها.
 
-**[تعرّف على I-Lang Prompt Spec ←](https://ilang.ai)**
+**[تعرّف على I-Lang Prompt Spec ←](https://ilang.ai/spec/)**
 
 ---
 

@@ -130,7 +130,7 @@ prompts_demo/
 
 Измените гены — измените бота. Чтобы настроить: скопируйте `prompts_demo/` в `prompts/` (загружается первым) и отредактируйте.
 
-**[Изучить I-Lang Prompt Spec →](https://ilang.ai)**
+**[Изучить I-Lang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 
