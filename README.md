@@ -184,6 +184,6 @@ Built with **[I-Lang Prompt Spec](https://ilang.ai)** — structured AI instruct
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)
 [![HF](https://img.shields.io/badge/HF-i--Lang-yellow?logo=huggingface)](https://huggingface.co/i-Lang)
 
-MIT · © [iLang Inc.](https://eastsoft.com) · [antispam.bot](https://antispam.bot) · [ilang.ai](https://ilang.ai)
+MIT · © [iLang Inc.](https://ilang.ai) · [antispam.bot](https://antispam.bot) · [ilang.ai](https://ilang.ai)
 
 </div>
