@@ -1,0 +1,38 @@
+{
+  "title": "TelegramGuard: an I-Lang-driven guardian bot for Telegram groups",
+  "description": "<p>A self-hostable Telegram bot that keeps a group clean and answers its members. Moderation, vision and chat behaviour are defined as I-Lang prompt specifications rather than prose, so the rules are readable and editable without touching the code. It runs against any OpenAI-compatible model, ships as a Docker image, needs two secrets to deploy, and is also available as a hosted bot. Readme in six languages.</p>",
+  "version": "1.0.1",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "Zhu, Long Quan",
+      "orcid": "0009-0004-4540-8082",
+      "affiliation": "iLang Inc."
+    }
+  ],
+  "keywords": [
+    "Telegram",
+    "anti-spam",
+    "moderation bot",
+    "I-Lang",
+    "OpenAI-compatible",
+    "Docker",
+    "self-hosted"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/ilang-ai/TelegramGuard",
+      "relation": "isSupplementTo",
+      "resource_type": "software",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://ilang.ai/spec/",
+      "relation": "isDocumentedBy",
+      "resource_type": "publication-technicalnote",
+      "scheme": "url"
+    }
+  ]
+}
