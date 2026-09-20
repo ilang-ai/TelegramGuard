@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use TelegramGuard, please cite it as below."
+title: "TelegramGuard: an I-Lang-driven guardian bot for Telegram groups"
+abstract: >-
+  A self-hostable Telegram bot that keeps a group clean and answers its
+  members. Moderation, vision and chat behaviour are defined as I-Lang prompt
+  specifications rather than prose, so the rules are readable and editable
+  without touching the code. It runs against any OpenAI-compatible model,
+  ships as a Docker image, needs two secrets to deploy, and is also available
+  as a hosted bot. Readme in six languages.
+type: software
+authors:
+  - given-names: "Long Quan"
+    family-names: "Zhu"
+    orcid: "https://orcid.org/0009-0004-4540-8082"
+    affiliation: "iLang Inc."
+repository-code: "https://github.com/ilang-ai/TelegramGuard"
+url: "https://github.com/ilang-ai/TelegramGuard"
+license: MIT
+version: "1.0.1"
+date-released: "2026-09-21"
+keywords:
+  - Telegram
+  - anti-spam
+  - moderation bot
+  - I-Lang
+  - OpenAI-compatible
+  - Docker
+  - self-hosted
