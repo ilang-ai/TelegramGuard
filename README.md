@@ -25,6 +25,7 @@ Open source (MIT), zero config, self-hostable — the **TelegramGuard** project.
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22865154.svg)](https://doi.org/10.5281/zenodo.22865154)
 
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
 
@@ -187,3 +188,9 @@ Built with **[I-Lang Prompt Spec](https://ilang.ai)** — structured AI instruct
 MIT · © [iLang Inc.](https://ilang.ai) · [antispam.bot](https://antispam.bot) · [ilang.ai](https://ilang.ai)
 
 </div>
+
+---
+
+## Citation
+
+[CITATION.cff](CITATION.cff); Zenodo archives each release. Concept DOI [10.5281/zenodo.22865154](https://doi.org/10.5281/zenodo.22865154) (all versions).
