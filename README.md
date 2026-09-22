@@ -23,7 +23,7 @@ tags:
 Open source (MIT), zero config, self-hostable — the **TelegramGuard** project.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
+[![Powered by iLang](https://img.shields.io/badge/powered%20by-iLang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22865154.svg)](https://doi.org/10.5281/zenodo.22865154)
 
@@ -128,7 +128,7 @@ Everything is set via environment variables — see [`.env.example`](.env.exampl
 
 ## Customize the AI
 
-The bot's brain lives in plain `.ilang` files — [I-Lang Prompt Spec](https://ilang.ai), where each `::GENE` defines a behavior.
+The bot's brain lives in plain `.ilang` files — [iLang Prompt Spec](https://ilang.ai), where each `::GENE` defines a behavior.
 
 ```
 prompts_demo/
@@ -150,7 +150,7 @@ prompts_demo/
 
 Change the genes, change the bot. To customize: copy `prompts_demo/` to `prompts/` (loaded first) and edit.
 
-**[Learn I-Lang Prompt Spec →](https://ilang.ai/spec/)**
+**[Learn iLang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 
@@ -168,7 +168,7 @@ TelegramGuard/
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
 │   ├── probe.py           Check-in filler detection (mark-only, never bans)
-│   ├── ilang_judge.py     I-Lang decision function
+│   ├── ilang_judge.py     iLang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock
 │   └── database.py        Schema
@@ -179,7 +179,7 @@ TelegramGuard/
 
 <div align="center">
 
-Built with **[I-Lang Prompt Spec](https://ilang.ai)** — structured AI instructions as genetic code.
+Built with **[iLang Prompt Spec](https://ilang.ai)** — structured AI instructions as genetic code.
 
 [![Spec](https://img.shields.io/badge/spec-ilang--ai/ilang--spec-black?logo=github)](https://github.com/ilang-ai/ilang-spec)
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)

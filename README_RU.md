@@ -7,7 +7,7 @@
 Открытый исходный код (MIT), нулевая настройка, возможность self-hosting — проект **TelegramGuard**.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
+[![Powered by iLang](https://img.shields.io/badge/powered%20by-iLang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
@@ -108,7 +108,7 @@ python bot.py
 
 ## Настройка AI
 
-Мозг бота живёт в обычных файлах `.ilang` — [I-Lang Prompt Spec](https://ilang.ai), где каждый `::GENE` определяет поведение.
+Мозг бота живёт в обычных файлах `.ilang` — [iLang Prompt Spec](https://ilang.ai), где каждый `::GENE` определяет поведение.
 
 ```
 prompts_demo/
@@ -130,7 +130,7 @@ prompts_demo/
 
 Измените гены — измените бота. Чтобы настроить: скопируйте `prompts_demo/` в `prompts/` (загружается первым) и отредактируйте.
 
-**[Изучить I-Lang Prompt Spec →](https://ilang.ai/spec/)**
+**[Изучить iLang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 
@@ -148,7 +148,7 @@ TelegramGuard/
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
 │   ├── probe.py           Обнаружение флуда «отметился» (только метки, без банов)
-│   ├── ilang_judge.py     I-Lang decision function
+│   ├── ilang_judge.py     iLang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock
 │   └── database.py        Schema
@@ -159,7 +159,7 @@ TelegramGuard/
 
 <div align="center">
 
-Создано на **[I-Lang Prompt Spec](https://ilang.ai)** — структурированные инструкции для AI как генетический код.
+Создано на **[iLang Prompt Spec](https://ilang.ai)** — структурированные инструкции для AI как генетический код.
 
 [![Spec](https://img.shields.io/badge/spec-ilang--ai/ilang--spec-black?logo=github)](https://github.com/ilang-ai/ilang-spec)
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)

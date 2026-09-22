@@ -7,7 +7,7 @@
 开源(MIT)、零配置、可自托管 —— 项目代号 **TelegramGuard**。
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
+[![Powered by iLang](https://img.shields.io/badge/powered%20by-iLang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#自己部署)
 
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
@@ -111,7 +111,7 @@ python bot.py
 
 ## 自定义 AI 人格
 
-机器人的大脑是几个 `.ilang` 文件 —— [I-Lang Prompt Spec](https://ilang.ai),每个 `::GENE` 定义一个行为。
+机器人的大脑是几个 `.ilang` 文件 —— [iLang Prompt Spec](https://ilang.ai),每个 `::GENE` 定义一个行为。
 
 ```
 prompts_demo/
@@ -133,7 +133,7 @@ prompts_demo/
 
 改基因 = 改机器人。想自定义:复制 `prompts_demo/` 到 `prompts/`(优先加载)再编辑。
 
-**[学习 I-Lang Prompt Spec →](https://ilang.ai/spec/)**
+**[学习 iLang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 
@@ -151,7 +151,7 @@ TelegramGuard/
 │   ├── prefilter.py       零成本垃圾预过滤 + 三路分诊
 │   ├── lexicon.py         黑话/规避归一化 + 打分
 │   ├── probe.py           签到水消息识别(只标记, 绝不封号)
-│   ├── ilang_judge.py     I-Lang 判定函数
+│   ├── ilang_judge.py     iLang 判定函数
 │   ├── admin.py           群管理
 │   ├── db.py              SQLite 共享连接 + 异步锁
 │   └── database.py        数据表
@@ -162,7 +162,7 @@ TelegramGuard/
 
 <div align="center">
 
-基于 **[I-Lang Prompt Spec](https://ilang.ai)** 构建 —— 用基因代码定义 AI 行为。
+基于 **[iLang Prompt Spec](https://ilang.ai)** 构建 —— 用基因代码定义 AI 行为。
 
 [![Spec](https://img.shields.io/badge/spec-ilang--ai/ilang--spec-black?logo=github)](https://github.com/ilang-ai/ilang-spec)
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)

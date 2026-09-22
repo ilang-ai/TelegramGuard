@@ -7,7 +7,7 @@
 Código abierto (MIT), sin configuración, autoalojable — el proyecto **TelegramGuard**.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
+[![Powered by iLang](https://img.shields.io/badge/powered%20by-iLang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
@@ -108,7 +108,7 @@ Todo se configura mediante variables de entorno — consulta [`.env.example`](.e
 
 ## Personaliza la IA
 
-El cerebro del bot vive en simples archivos `.ilang` — [I-Lang Prompt Spec](https://ilang.ai), donde cada `::GENE` define un comportamiento.
+El cerebro del bot vive en simples archivos `.ilang` — [iLang Prompt Spec](https://ilang.ai), donde cada `::GENE` define un comportamiento.
 
 ```
 prompts_demo/
@@ -130,7 +130,7 @@ prompts_demo/
 
 Cambia los genes, cambia el bot. Para personalizar: copia `prompts_demo/` a `prompts/` (se carga primero) y edítalo.
 
-**[Aprende la I-Lang Prompt Spec →](https://ilang.ai/spec/)**
+**[Aprende la iLang Prompt Spec →](https://ilang.ai/spec/)**
 
 ---
 
@@ -148,7 +148,7 @@ TelegramGuard/
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
 │   ├── probe.py           Detección de relleno tipo «presente» (solo marca, nunca banea)
-│   ├── ilang_judge.py     I-Lang decision function
+│   ├── ilang_judge.py     iLang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock
 │   └── database.py        Schema
@@ -159,7 +159,7 @@ TelegramGuard/
 
 <div align="center">
 
-Construido con **[I-Lang Prompt Spec](https://ilang.ai)** — instrucciones de IA estructuradas como código genético.
+Construido con **[iLang Prompt Spec](https://ilang.ai)** — instrucciones de IA estructuradas como código genético.
 
 [![Spec](https://img.shields.io/badge/spec-ilang--ai/ilang--spec-black?logo=github)](https://github.com/ilang-ai/ilang-spec)
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)

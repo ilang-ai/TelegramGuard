@@ -7,7 +7,7 @@
 متن‌باز (MIT)، بدون تنظیمات، قابل میزبانی شخصی — پروژه‌ی **TelegramGuard**.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Powered by I-Lang](https://img.shields.io/badge/powered%20by-I--Lang%20Spec-blueviolet)](https://ilang.ai)
+[![Powered by iLang](https://img.shields.io/badge/powered%20by-iLang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
@@ -108,7 +108,7 @@ python bot.py
 
 ## سفارشی‌سازی هوش مصنوعی
 
-مغز ربات در فایل‌های ساده‌ی `.ilang` جای دارد — [I-Lang Prompt Spec](https://ilang.ai)، جایی که هر `::GENE` یک رفتار را تعریف می‌کند.
+مغز ربات در فایل‌های ساده‌ی `.ilang` جای دارد — [iLang Prompt Spec](https://ilang.ai)، جایی که هر `::GENE` یک رفتار را تعریف می‌کند.
 
 ```
 prompts_demo/
@@ -130,7 +130,7 @@ prompts_demo/
 
 ژن‌ها را تغییر دهید، ربات را تغییر می‌دهید. برای سفارشی‌سازی: `prompts_demo/` را در `prompts/` کپی کنید (ابتدا بارگذاری می‌شود) و ویرایش کنید.
 
-**[آشنایی با I-Lang Prompt Spec ←](https://ilang.ai/spec/)**
+**[آشنایی با iLang Prompt Spec ←](https://ilang.ai/spec/)**
 
 ---
 
@@ -148,7 +148,7 @@ TelegramGuard/
 │   ├── prefilter.py       Zero-cost spam pre-filter + triage
 │   ├── lexicon.py         Slang / evasion normalization + scoring
 │   ├── probe.py           تشخیص پیام‌های «حضور» (فقط نشانه‌گذاری، بدون مسدودسازی)
-│   ├── ilang_judge.py     I-Lang decision function
+│   ├── ilang_judge.py     iLang decision function
 │   ├── admin.py           Group admin
 │   ├── db.py              Shared SQLite + async lock
 │   └── database.py        Schema
@@ -159,7 +159,7 @@ TelegramGuard/
 
 <div align="center">
 
-ساخته‌شده با **[I-Lang Prompt Spec](https://ilang.ai)** — دستورالعمل‌های ساختارمند هوش مصنوعی همچون کد ژنتیکی.
+ساخته‌شده با **[iLang Prompt Spec](https://ilang.ai)** — دستورالعمل‌های ساختارمند هوش مصنوعی همچون کد ژنتیکی.
 
 [![Spec](https://img.shields.io/badge/spec-ilang--ai/ilang--spec-black?logo=github)](https://github.com/ilang-ai/ilang-spec)
 [![Web](https://img.shields.io/badge/web-ilang.ai-blue)](https://ilang.ai)
