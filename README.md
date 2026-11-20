@@ -27,6 +27,8 @@ Open source (MIT), zero config, self-hostable — the **TelegramGuard** project.
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22865154.svg)](https://doi.org/10.5281/zenodo.22865154)
 
+[TelegramGuard website](https://antispam.bot/guard/) · [Telegram directory](https://antispam.bot/)
+
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
 
 </div>

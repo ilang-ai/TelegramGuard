@@ -10,6 +10,8 @@
 [![Powered by iLang](https://img.shields.io/badge/powered%20by-iLang%20Spec-blueviolet)](https://ilang.ai)
 [![AI: OpenAI-compatible](https://img.shields.io/badge/AI-OpenAI--compatible-06D6A0)](#self-host)
 
+[وب‌سایت رسمی TelegramGuard](https://antispam.bot/guard/) · [فهرست تلگرام](https://antispam.bot/)
+
 🌐 [English](README.md) · [中文](README_CN.md) · [Русский](README_RU.md) · [Español](README_ES.md) · [العربية](README_AR.md) · [فارسی](README_FA.md)
 
 </div>
