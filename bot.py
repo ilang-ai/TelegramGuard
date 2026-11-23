@@ -876,6 +876,7 @@ def start_health_server():
 # ==================== Main ====================
 
 from modules import ai_provider
+from modules import spamlib
 
 async def _post_shutdown(app):
     # Runs after Application.shutdown(): release the aiosqlite worker thread so
@@ -960,6 +961,11 @@ def main():
     if app.job_queue:
         app.job_queue.run_repeating(onboarding.sweep, interval=onboarding.SWEEP_INTERVAL,
                                     first=onboarding.SWEEP_FIRST, name="rights_sweep")
+        # 自学习 spam 硬库：每周日 03:00（北京时间）清旧条目 + VACUUM + 导出 I-Lang（modules/spamlib.py）
+        from datetime import time as _dtime
+        from zoneinfo import ZoneInfo as _ZI
+        app.job_queue.run_daily(spamlib.weekly_job, time=_dtime(3, 0, tzinfo=_ZI("Asia/Shanghai")),
+                                days=(0,), name="spamlib_weekly")  # PTB: 0=Sunday
 
     # Detect mode: webhook (Cloud Run / Railway) or polling (VPS)
     webhook_url = os.environ.get("WEBHOOK_URL", "")

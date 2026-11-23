@@ -4,6 +4,7 @@ import random
 import os
 
 from modules import ai_provider
+from modules import spamlib
 from modules import lexicon
 import config
 
@@ -136,6 +137,16 @@ def _lexicon_fallback(text):
         logger.warning("lexicon fallback failed: " + str(e))
         return False
 
+async def _hard_fallback(text):
+    """AI 不可用 / 答案解析不出来时的容灾：先查自学习硬库（spamlib），再退词库。"""
+    try:
+        if await spamlib.hard_judge(text):
+            return True
+    except Exception as e:
+        logger.warning("[spamlib] hard_judge failed: %s", e)
+    return _lexicon_fallback(text)
+
+
 
 async def ai_text(text, history=None, context_info=""):
     try:
@@ -190,12 +201,14 @@ async def ai_judge_group_message(text, sender_context=""):
         raw = await ai_provider.generate_text(prompt, max_tokens=32, temperature=0.0)
         verdict = _is_spam(raw)
         if verdict is None:  # unparseable — don't let it through silently
-            logger.warning("spam text verdict unparseable: " + repr((raw or "")[:80]) + " — falling back to lexicon")
-            return _lexicon_fallback(text)
+            logger.warning("spam text verdict unparseable: " + repr((raw or "")[:80]) + " — falling back to spamlib+lexicon")
+            return await _hard_fallback(text)
+        if verdict:
+            await spamlib.learn(text)  # 收敛：AI 判为 spam 的文本进自学习硬库
         return verdict
     except Exception as e:
-        logger.warning("spam text judge failed, falling back to lexicon: " + str(e))
-        return _lexicon_fallback(text)
+        logger.warning("spam text judge failed, falling back to spamlib+lexicon: " + str(e))
+        return await _hard_fallback(text)
 
 
 async def ai_judge_group_image(image_bytes, caption="", sender_context=""):
@@ -209,11 +222,11 @@ async def ai_judge_group_image(image_bytes, caption="", sender_context=""):
         verdict = _is_spam(raw)
         if verdict is None:  # same as above — no silent pass
             logger.warning("spam image verdict unparseable: " + repr((raw or "")[:80]) + " — falling back to lexicon")
-            return _lexicon_fallback(caption)
+            return await _hard_fallback(caption)
         return verdict
     except Exception as e:
         logger.warning("spam image judge failed, falling back to lexicon: " + str(e))
-        return _lexicon_fallback(caption)
+        return await _hard_fallback(caption)
 
 
 async def ai_group_vision(image_bytes, caption="", history=None):
