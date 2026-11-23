@@ -506,6 +506,24 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
     # Probe ("check-in") filler: mark only, never ban. Runs before the duplicate
     # check so repeated check-ins can't escalate into a ban.
+    # 新成员第一句就是签到类 → 当 bot 直接封（机主 2026-11-23：真实用户不会第一句话写这个）。
+    # 只对 48 小时内进群且有进群记录的成员生效；老成员仍走下面只标记不封的探针层。
+    try:
+        if msg.text and await probe.is_new_member_probe(msg.text, chat_id, uid):
+            try:
+                await context.bot.ban_chat_member(chat_id, user.id)
+            except Exception as e:
+                logger.warning("new-member probe ban failed: chat=%s user=%s err=%s", chat_id, uid, e)
+            try:
+                await msg.delete()
+            except Exception:
+                pass
+            logger.info("NEW MEMBER PROBE banned: chat=%s user=%s text=%r", chat_id, uid, msg.text[:20])
+            raise ApplicationHandlerStop
+    except ApplicationHandlerStop:
+        raise
+    except Exception as e:
+        logger.warning("new-member probe check failed: %s", e)
     probe_result = None
     try:
         probe_result = await probe.check(msg, chat_id, uid, context.bot.username)
@@ -745,6 +763,10 @@ async def _reject_spam_name_on_join(context, chat, user, service_msg=None):
     if len(seen) > 5000:
         for kk in [x for x, t in seen.items() if now - t > 600]:
             seen.pop(kk, None)
+    try:
+        await probe.record_join(chat.id, user.id)  # 新成员第一句话规则要靠这条记录
+    except Exception as e:
+        logger.warning("record_join failed: %s", e)
     if not await check_tos(chat.id) or not await onboarding.has_rights(context, chat.id):
         return False
     is_spam, reason = await namecheck.name_is_spam_async(user)

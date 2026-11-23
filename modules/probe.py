@@ -57,6 +57,51 @@ def looks_like_foreign_start(text, my_username=""):
     return m.group(1).lower() != (my_username or "").lower().lstrip("@")
 
 
+# ==================== 新成员第一句话 = 签到类 → 当 bot 直接封 ====================
+# 机主 2026-11-23：「进群只要发什么签到或者之类的问题的，就当 bot 直接处理掉，因为真实用户不会第一句话写这个」。
+# 比上面的 PROBE_PATTERNS 宽：那个作用于所有成员所以必须窄；这个只看新成员的第一句话。
+FIRST_PROBE_PATTERNS = re.compile(
+    r"^(签到|打卡|报到|报道|新人报道|前来报道|冒泡|水一下|沙发|路过|测试|test|testing|ping|"
+    r"在吗|在不在|有人吗|有人在吗|有人么|在么|有没有人)[\s!！?？。.~～]*$", re.I)
+_FIRST_PROBE_NUMERIC_OR_PUNCT = re.compile(r"^[\d\s.。,，!！?？~～+\-=]{1,6}$")
+_FIRST_PROBE_SYMBOLS_ONLY = re.compile(r"^[^\w\u4e00-\u9fff]{1,6}$")
+
+
+def looks_like_first_probe(text):
+    """新成员第一句话是不是签到类填充：签到/打卡/测试/在吗…，或纯数字、纯标点、纯 emoji（≤6 个）。"""
+    if not text:
+        return False
+    t = text.strip()
+    if len(t) > 12:
+        return False
+    return bool(FIRST_PROBE_PATTERNS.match(t) or _FIRST_PROBE_NUMERIC_OR_PUNCT.match(t) or _FIRST_PROBE_SYMBOLS_ONLY.match(t))
+
+
+async def record_join(chat_id, user_id):
+    """进群时记一行（chat_member 订阅后才有这条路；之前 new_members 表一直是空的）。"""
+    async with shared_db() as db:
+        await db.execute(
+            "INSERT INTO new_members (chat_id, user_id, joined_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(chat_id, user_id) DO UPDATE SET joined_at=CURRENT_TIMESTAMP",
+            (chat_id, user_id))
+        await db.commit()
+
+
+async def joined_recently(chat_id, user_id, hours=48):
+    async with shared_db() as db:
+        cur = await db.execute(
+            "SELECT 1 FROM new_members WHERE chat_id=? AND user_id=? AND joined_at >= datetime('now', ?)",
+            (chat_id, user_id, "-%d hours" % int(hours)))
+        return (await cur.fetchone()) is not None
+
+
+async def is_new_member_probe(text, chat_id, user_id):
+    """新成员（48 小时内进群，有进群记录）发签到类 → True。老成员或没记录的一律 False。"""
+    if not looks_like_first_probe(text):
+        return False
+    return await joined_recently(chat_id, user_id)
+
+
 def _window_hours():
     try:
         return max(1, int(getattr(config, "PROBE_WINDOW_HOURS", 24)))
