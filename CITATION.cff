@@ -27,3 +27,170 @@ keywords:
   - OpenAI-compatible
   - Docker
   - self-hosted
+references:
+  - type: article
+    title: "The distribution of the flora in the alpine zone"
+    authors:
+      - given-names: "Paul"
+        family-names: "Jaccard"
+    year: 1912
+    journal: "New Phytologist"
+    volume: 11
+    issue: 2
+    doi: "10.1111/j.1469-8137.1912.tb05611.x"
+    notes: "instrument; METHOD.md 2.2 fallback rule 3 (trigram Jaccard similarity)"
+  - type: conference-paper
+    title: "On the resemblance and containment of documents"
+    authors:
+      - given-names: "Andrei Z."
+        family-names: "Broder"
+    year: 1997
+    conference:
+      name: "Proceedings, Compression and Complexity of SEQUENCES 1997"
+    doi: "10.1109/SEQUEN.1997.666900"
+    notes: "instrument; METHOD.md 2.2 character shingling for near-duplicate spam"
+  - type: article
+    title: "Maximum likelihood estimation of observer error-rates using the EM algorithm"
+    authors:
+      - given-names: "A. P."
+        family-names: "Dawid"
+      - given-names: "A. M."
+        family-names: "Skene"
+    year: 1979
+    journal: "Applied Statistics"
+    volume: 28
+    issue: 1
+    doi: "10.2307/2346806"
+    notes: "foundation; METHOD.md 2.2 the count>=2 gate as agreement of independent noisy labels"
+  - type: conference-paper
+    title: "An evaluation of naive Bayesian anti-spam filtering"
+    authors:
+      - given-names: "Ion"
+        family-names: "Androutsopoulos"
+      - given-names: "John"
+        family-names: "Koutsias"
+      - given-names: "Konstantinos V."
+        family-names: "Chandrinos"
+      - given-names: "George"
+        family-names: "Paliouras"
+      - given-names: "Constantine D."
+        family-names: "Spyropoulos"
+    year: 2000
+    conference:
+      name: "Workshop on Machine Learning in the New Information Age, ECML 2000"
+    doi: "10.48550/arXiv.cs/0006013"
+    notes: "related work; METHOD.md 2.1 and 5 - what is deliberately not fitted"
+  - type: conference-paper
+    title: "Contributions to the study of SMS spam filtering: new collection and results"
+    authors:
+      - given-names: "Tiago A."
+        family-names: "Almeida"
+      - given-names: "José María"
+        family-names: "Gómez Hidalgo"
+      - given-names: "Akebo"
+        family-names: "Yamakami"
+    year: 2011
+    conference:
+      name: "DocEng '11, 11th ACM Symposium on Document Engineering"
+    doi: "10.1145/2034691.2034742"
+    notes: "precedent; METHOD.md 2.4 publishing a short-text spam corpus"
+  - type: article
+    title: "A survey on concept drift adaptation"
+    authors:
+      - given-names: "João"
+        family-names: "Gama"
+      - given-names: "Indrė"
+        family-names: "Žliobaitė"
+      - given-names: "Albert"
+        family-names: "Bifet"
+      - given-names: "Mykola"
+        family-names: "Pechenizkiy"
+      - given-names: "Abdelhamid"
+        family-names: "Bouchachia"
+    year: 2014
+    journal: "ACM Computing Surveys"
+    volume: 46
+    issue: 4
+    doi: "10.1145/2523813"
+    notes: "foundation; METHOD.md 2.1 weekly decay of stale singletons"
+  - type: article
+    title: "Distilling the knowledge in a neural network"
+    authors:
+      - given-names: "Geoffrey"
+        family-names: "Hinton"
+      - given-names: "Oriol"
+        family-names: "Vinyals"
+      - given-names: "Jeff"
+        family-names: "Dean"
+    year: 2015
+    journal: "arXiv"
+    doi: "10.48550/arXiv.1503.02531"
+    notes: "framing; METHOD.md 1 and 5 - distilling a strong judge into a cheap artefact (a rule library, not a student model)"
+  - type: article
+    title: "Snorkel: rapid training data creation with weak supervision"
+    authors:
+      - given-names: "Alexander"
+        family-names: "Ratner"
+      - given-names: "Stephen H."
+        family-names: "Bach"
+      - given-names: "Henry"
+        family-names: "Ehrenberg"
+      - given-names: "Jason"
+        family-names: "Fries"
+      - given-names: "Sen"
+        family-names: "Wu"
+      - given-names: "Christopher"
+        family-names: "Ré"
+    year: 2017
+    journal: "Proceedings of the VLDB Endowment"
+    volume: 11
+    issue: 3
+    doi: "10.14778/3157794.3157797"
+    notes: "framing; METHOD.md 1 and 5 - the language model as a weak labelling function"
+  - type: conference-paper
+    title: "Judging LLM-as-a-judge with MT-Bench and Chatbot Arena"
+    authors:
+      - given-names: "Lianmin"
+        family-names: "Zheng"
+      - given-names: "Wei-Lin"
+        family-names: "Chiang"
+      - given-names: "Ying"
+        family-names: "Sheng"
+      - given-names: "Siyuan"
+        family-names: "Zhuang"
+      - given-names: "Zhanghao"
+        family-names: "Wu"
+      - given-names: "Yonghao"
+        family-names: "Zhuang"
+      - given-names: "Zi"
+        family-names: "Lin"
+      - given-names: "Zhuohan"
+        family-names: "Li"
+      - given-names: "Dacheng"
+        family-names: "Li"
+      - given-names: "Eric P."
+        family-names: "Xing"
+      - given-names: "Hao"
+        family-names: "Zhang"
+      - given-names: "Joseph E."
+        family-names: "Gonzalez"
+      - given-names: "Ion"
+        family-names: "Stoica"
+    year: 2023
+    conference:
+      name: "NeurIPS 2023 Datasets and Benchmarks Track"
+    doi: "10.48550/arXiv.2306.05685"
+    notes: "framing; METHOD.md 1 and 5 - the language model as judge"
+  - type: standard
+    title: "Unicode Technical Standard #39: Unicode Security Mechanisms"
+    authors:
+      - name: "Unicode Consortium"
+    url: "https://www.unicode.org/reports/tr39/"
+    notes: "instrument; METHOD.md 2.1 confusable-character folding in normalization"
+  - type: software
+    title: "iLang Protocol Specification"
+    authors:
+      - given-names: "Long Quan"
+        family-names: "Zhu"
+    doi: "10.5281/zenodo.21821452"
+    notes: "foundation; METHOD.md 2.4 corpus format; the bot's moderation and chat rules are iLang prompt specifications"

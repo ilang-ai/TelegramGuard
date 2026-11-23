@@ -14,13 +14,13 @@ A moderation bot for public Telegram groups has to judge every message. In produ
 1. **It costs money per call**, and a second, stronger model as fallback would cost an order of magnitude more.
 2. **It is an external dependency.** Keys expire, balances run out, providers go down. In one 29-day incident the judge failed silently on every call and the bot fell back to a small hand-written keyword list without anyone noticing.
 
-The question is therefore not "how to make the judge better" but **"what should the system learn from the judge while it is available, so that it keeps working at zero cost when it is not, and so that the learned knowledge is itself a publishable artefact."**
+The question is therefore not "how to make the judge better" but **"what should the system learn from the judge while it is available, so that it keeps working at zero cost when it is not, and so that the learned knowledge is itself a publishable artefact."** Framed in the literature: the language model is a *weak labelling function* in the sense of Snorkel [Ratner 2017] and an *LLM-as-a-judge* [Zheng 2023]; what we distil from it is not a student network [Hinton 2015] but a counted, human-readable rule library.
 
 ## 2. Method
 
 ### 2.1 Convergence-only learning
 
-Let the judge be an oracle `J(m) ∈ {spam, ok}` over messages `m`. The system never trains anything. It only **converges** the oracle's positive verdicts into a library `L`:
+Let the judge be an oracle `J(m) ∈ {spam, ok}` over messages `m`. The system never trains anything — no Bayesian filter in the classic sense [Androutsopoulos 2000], no fitted weights. It only **converges** the oracle's positive verdicts into a library `L`:
 
 ```
 on J(m) = spam:
@@ -32,11 +32,13 @@ on J(m) = spam:
         C[t].count += 1 ; C[t].last_seen := now
 ```
 
+Normalization folds full-width characters, strips zero-width code points and maps visually confusable characters (Latin/Cyrillic/CJK look-alikes) to a canonical form, in the spirit of Unicode's confusable-character tables [UTS 39]; spam relies on exactly these substitutions to evade keyword filters.
+
 Three choices make this trivially correct and cheap:
 
 - **Idempotent by construction.** The hash is the primary key, so duplicates cannot exist; "deduplication" is not a job that can fail.
 - **Positive-only.** Normal messages are never stored. The library contains nothing that a group member wrote in good faith.
-- **Monotone with decay.** Entries only ever gain weight while they recur. A weekly job removes entries that were seen once and not again for 90 days, so the library tracks the current spam population instead of growing forever.
+- **Monotone with decay.** Entries only ever gain weight while they recur. A weekly job removes entries that were seen once and not again for 90 days, so the library tracks the current spam population instead of growing forever — a deliberately simple answer to concept drift [Gama 2014]: forget what stopped recurring, keep what keeps coming back.
 
 ### 2.2 Deterministic fallback (disaster-recovery judgement)
 
@@ -51,9 +53,9 @@ hard(m):
     else                                                    → defer to the keyword lexicon
 ```
 
-`J3` is the Jaccard similarity of character trigram sets (whitespace removed), which is language-agnostic and handles Chinese without tokenisation. Length pre-filtering (±50 %) keeps the scan linear and cheap; the library is cached in memory and refreshed every ten minutes.
+`J3` is the Jaccard index [Jaccard 1912] of character trigram sets (whitespace removed) — the resemblance measure of Broder's shingling [Broder 1997] applied at character level, which is language-agnostic and handles Chinese without tokenisation. Length pre-filtering (±50 %) keeps the scan linear and cheap; the library is cached in memory and refreshed every ten minutes.
 
-**The `count ≥ 2` gate is the false-positive guard.** A language-model judge is occasionally wrong. A single wrong verdict enters the library with count 1 and is inert; it only becomes an active rule if the same normalized text (or the same contact token) is independently judged spam again. In practice spam is repeated verbatim or near-verbatim across groups, while a mistaken verdict on a genuine message is not.
+**The `count ≥ 2` gate is the false-positive guard.** A language-model judge is occasionally wrong. A single wrong verdict enters the library with count 1 and is inert; it only becomes an active rule if the same normalized text (or the same contact token) is independently judged spam again. This is the crudest possible form of requiring agreement between independent noisy labels — the problem Dawid and Skene modelled with observer error rates [Dawid 1979] — chosen because it needs no model of the judge's reliability. In practice spam is repeated verbatim or near-verbatim across groups, while a mistaken verdict on a genuine message is not.
 
 The library is **only** used in fallback. While the oracle is healthy the judgement path is unchanged, so the system's day-to-day precision is the oracle's precision; the library adds resilience, not noise.
 
@@ -66,7 +68,7 @@ Two rules act before any model is consulted, because the signal is unambiguous a
 
 ### 2.4 The corpus as an artefact
 
-The weekly maintenance job exports the active part of the library (`count ≥ 2`) as an **iLang** document:
+The weekly maintenance job exports the active part of the library (`count ≥ 2`) as an **iLang** document [iLang spec]. Publishing a counted, deduplicated short-text spam collection follows the precedent of the SMS spam corpus [Almeida 2011], which made comparable results possible for that medium:
 
 ```
 ::ILANG::v5.0::RULES
@@ -102,7 +104,7 @@ Numbers are reported when they exist; the absence of a number means it has not b
 
 ## 5. Relation to prior work
 
-Content-based spam filtering with Bayesian classifiers goes back to Sahami et al. (1998) and became ubiquitous after Graham (2002). Current open-source Telegram anti-spam bots such as *tg-spam* combine a Bayes classifier over sample sets, stop-words, similarity checks and metadata heuristics, with optional language-model checks. The method here differs in what is learned and from whom: nothing is fitted, the only source of labels is the production language-model judge, the learned object is a counted, deduplicated library that is published as text, and the library is deliberately confined to the fallback path so that it can never lower the precision of the primary judge.
+Content-based spam filtering with naive Bayes classifiers was established for e-mail by Sahami et al. (1998) and evaluated systematically by Androutsopoulos et al. [Androutsopoulos 2000]; the SMS spam corpus [Almeida 2011] carried the same methodology to short messages, the closest medium to group chat. Current open-source Telegram anti-spam bots such as *tg-spam* combine a Bayes classifier over sample sets, stop-words, similarity checks and metadata heuristics, with optional language-model checks. Using a large model as the labeller is the weak-supervision setting of Snorkel [Ratner 2017] and the LLM-as-a-judge setting of Zheng et al. [Zheng 2023]; compressing a strong model's behaviour into a cheap artefact is the aim of knowledge distillation [Hinton 2015]. The method here differs in what is learned and from whom: nothing is fitted, the only source of labels is the production language-model judge, the learned object is a counted, deduplicated library that is published as text, and the library is deliberately confined to the fallback path so that it can never lower the precision of the primary judge.
 
 ## 6. Reproducing
 
@@ -113,7 +115,16 @@ Content-based spam filtering with Bayesian classifiers goes back to Sahami et al
 
 ## References
 
-- M. Sahami, S. Dumais, D. Heckerman, E. Horvitz. *A Bayesian approach to filtering junk e-mail.* AAAI-98 Workshop on Learning for Text Categorization, 1998.
-- P. Graham. *A Plan for Spam.* 2002. http://www.paulgraham.com/spam.html
-- umputun. *tg-spam: anti-spam bot for Telegram and general-purpose anti-spam library.* https://github.com/umputun/tg-spam (MIT).
-- iLang specification: https://ilang.ai/spec/
+- [Jaccard 1912] P. Jaccard. The distribution of the flora in the alpine zone. *New Phytologist* 11(2):37–50, 1912. doi:[10.1111/j.1469-8137.1912.tb05611.x](https://doi.org/10.1111/j.1469-8137.1912.tb05611.x)
+- [Broder 1997] A. Z. Broder. On the resemblance and containment of documents. *Proceedings, Compression and Complexity of SEQUENCES 1997*, IEEE. doi:[10.1109/SEQUEN.1997.666900](https://doi.org/10.1109/SEQUEN.1997.666900)
+- [Dawid 1979] A. P. Dawid, A. M. Skene. Maximum likelihood estimation of observer error-rates using the EM algorithm. *Applied Statistics* 28(1):20–28, 1979. doi:[10.2307/2346806](https://doi.org/10.2307/2346806)
+- [Androutsopoulos 2000] I. Androutsopoulos, J. Koutsias, K. V. Chandrinos, G. Paliouras, C. D. Spyropoulos. An evaluation of naive Bayesian anti-spam filtering. Workshop on Machine Learning in the New Information Age, ECML 2000. doi:[10.48550/arXiv.cs/0006013](https://doi.org/10.48550/arXiv.cs/0006013)
+- [Almeida 2011] T. A. Almeida, J. M. Gómez Hidalgo, A. Yamakami. Contributions to the study of SMS spam filtering: new collection and results. *DocEng '11*, ACM. doi:[10.1145/2034691.2034742](https://doi.org/10.1145/2034691.2034742)
+- [Gama 2014] J. Gama, I. Žliobaitė, A. Bifet, M. Pechenizkiy, A. Bouchachia. A survey on concept drift adaptation. *ACM Computing Surveys* 46(4), 2014. doi:[10.1145/2523813](https://doi.org/10.1145/2523813)
+- [Hinton 2015] G. Hinton, O. Vinyals, J. Dean. Distilling the knowledge in a neural network. arXiv:1503.02531, 2015. doi:[10.48550/arXiv.1503.02531](https://doi.org/10.48550/arXiv.1503.02531)
+- [Ratner 2017] A. Ratner, S. H. Bach, H. Ehrenberg, J. Fries, S. Wu, C. Ré. Snorkel: rapid training data creation with weak supervision. *Proceedings of the VLDB Endowment* 11(3):269–282, 2017. doi:[10.14778/3157794.3157797](https://doi.org/10.14778/3157794.3157797)
+- [Zheng 2023] L. Zheng, W.-L. Chiang, Y. Sheng, S. Zhuang, Z. Wu, Y. Zhuang, Z. Lin, Z. Li, D. Li, E. P. Xing, H. Zhang, J. E. Gonzalez, I. Stoica. Judging LLM-as-a-judge with MT-Bench and Chatbot Arena. arXiv:2306.05685, 2023 (NeurIPS 2023 Datasets and Benchmarks). doi:[10.48550/arXiv.2306.05685](https://doi.org/10.48550/arXiv.2306.05685)
+- [UTS 39] Unicode Consortium. Unicode Technical Standard #39: Unicode Security Mechanisms. https://www.unicode.org/reports/tr39/
+- [iLang spec] L. Q. Zhu. iLang Protocol Specification. Zenodo. doi:[10.5281/zenodo.21821452](https://doi.org/10.5281/zenodo.21821452)
+- Sahami, M., Dumais, S., Heckerman, D., Horvitz, E. A Bayesian approach to filtering junk e-mail. AAAI-98 Workshop on Learning for Text Categorization, 1998 (no DOI).
+- umputun. tg-spam: anti-spam bot for Telegram and general-purpose anti-spam library. https://github.com/umputun/tg-spam (MIT).
