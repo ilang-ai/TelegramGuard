@@ -531,6 +531,12 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
     # Duplicate message detection
     spam = False
+    # Name-is-spam: the sender's display name / username is itself an ad -> spam, no AI call (modules/namecheck).
+    if not spam:
+        _ns, _nreason = namecheck.name_is_spam(user)
+        if _ns:
+            spam = True
+            logger.info("NAME SPAM: user=%s chat=%s reason=%s", uid, chat_id, _nreason)
     if content_hash:
         recent_same = [
             e for e in user_msgs[uid]
@@ -721,6 +727,66 @@ async def handle_private_voice(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # ==================== Events ====================
 
+
+# ==================== Join: name-is-spam -> reject on entry ====================
+# 2026-11-23 机主：「很多人名字就是 spam，加的时候就直接拒绝」。确定性规则（modules/namecheck），零 AI 调用。
+# chat_member 更新和 new_chat_members 服务消息两路都会报同一次进群，用 bot_data 去重只处理一次。
+
+async def _reject_spam_name_on_join(context, chat, user, service_msg=None):
+    if getattr(user, "is_bot", False):
+        return False
+    import time as _t
+    now = _t.time()
+    seen = context.bot_data.setdefault("joinchk_seen", {})
+    k = "%s_%s" % (chat.id, user.id)
+    if now - seen.get(k, 0) < 120:
+        return False
+    seen[k] = now
+    if len(seen) > 5000:
+        for kk in [x for x, t in seen.items() if now - t > 600]:
+            seen.pop(kk, None)
+    if not await check_tos(chat.id) or not await onboarding.has_rights(context, chat.id):
+        return False
+    is_spam, reason = await namecheck.name_is_spam_async(user)
+    if not is_spam:
+        return False
+    try:
+        await context.bot.ban_chat_member(chat.id, user.id)
+        if service_msg is not None:
+            try:
+                await service_msg.delete()
+            except Exception:
+                pass
+        logger.info("JOIN rejected (spam name): chat=%s user=%s name=%r reason=%s",
+                    chat.id, user.id, namecheck.display_name(user)[:40], reason)
+        try:
+            await spamlib.learn(namecheck.display_name(user))
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        logger.warning("JOIN reject failed: chat=%s user=%s err=%s", chat.id, user.id, e)
+        return False
+
+
+async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cmu = update.chat_member
+    if not cmu or not cmu.new_chat_member or not cmu.new_chat_member.user:
+        return
+    old = cmu.old_chat_member.status if cmu.old_chat_member else None
+    new = cmu.new_chat_member.status
+    if old in ("left", "kicked", None) and new == "member":
+        await _reject_spam_name_on_join(context, cmu.chat, cmu.new_chat_member.user)
+
+
+async def handle_new_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.message
+    if not msg or not msg.new_chat_members:
+        return
+    for u in msg.new_chat_members:
+        await _reject_spam_name_on_join(context, msg.chat, u, service_msg=msg)
+
+
 async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = update.my_chat_member
     if not result:
@@ -877,6 +943,7 @@ def start_health_server():
 
 from modules import ai_provider
 from modules import spamlib
+from modules import namecheck
 
 async def _post_shutdown(app):
     # Runs after Application.shutdown(): release the aiosqlite worker thread so
@@ -915,6 +982,9 @@ def main():
         app.add_handler(CommandHandler(cmd, fn, filters=filters.UpdateType.MESSAGE))
 
     app.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    # 进群名字检查：两路都接（chat_member 需要 allowed_updates 订阅；服务消息是兜底）
+    app.add_handler(ChatMemberHandler(handle_chat_member, ChatMemberHandler.CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS & filters.ChatType.GROUPS, handle_new_members))
     app.add_handler(CallbackQueryHandler(handle_tos_callback, pattern="^tos_"))
 
     # Group — deliberately no UpdateType filter: edits must be re-judged here.
@@ -983,7 +1053,7 @@ def main():
             # edited_message: without subscribing, Telegram never sends edit
             # events at all and "post something harmless, then edit it into an
             # ad" walks straight past the anti-spam pipeline.
-            allowed_updates=["message", "edited_message", "callback_query", "my_chat_member"],
+            allowed_updates=["message", "edited_message", "callback_query", "my_chat_member", "chat_member"],
         )
     else:
         # Polling mode: run AI test first, then start
@@ -1007,7 +1077,7 @@ def main():
             drop_pending_updates=True,
             # See the webhook branch above — edited_message must be subscribed
             # to or edits bypass anti-spam entirely.
-            allowed_updates=["message", "edited_message", "callback_query", "my_chat_member"],
+            allowed_updates=["message", "edited_message", "callback_query", "my_chat_member", "chat_member"],
             bootstrap_retries=10
         )
 
