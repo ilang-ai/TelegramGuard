@@ -196,3 +196,5 @@ MIT · © [iLang Inc.](https://ilang.ai) · [antispam.bot](https://antispam.bot)
 ## Citation
 
 [CITATION.cff](CITATION.cff); Zenodo archives each release. Concept DOI [10.5281/zenodo.22865154](https://doi.org/10.5281/zenodo.22865154) (all versions).
+
+Method note: [docs/METHOD.md](docs/METHOD.md) — convergence-only learning, the deterministic fallback judge, and the join-time rules. Published spam corpus (iLang format): [corpus/](corpus/), one snapshot per release.
