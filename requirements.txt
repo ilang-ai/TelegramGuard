@@ -2,3 +2,4 @@ python-telegram-bot[job-queue]>=21.0
 openai>=1.40
 Pillow>=10.0
 aiosqlite>=0.20.0
+tzdata>=2024.1  # zoneinfo on python:*-slim images has no system tz database; the weekly spamlib job uses ZoneInfo("Asia/Shanghai")
