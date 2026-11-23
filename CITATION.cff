@@ -2,12 +2,13 @@ cff-version: 1.2.0
 message: "If you use TelegramGuard, please cite it as below."
 title: "TelegramGuard: an iLang-driven guardian bot for Telegram groups"
 abstract: >-
-  A self-hostable Telegram bot that keeps a group clean and answers its
-  members. Moderation, vision and chat behaviour are defined as iLang prompt
-  specifications rather than prose, so the rules are readable and editable
-  without touching the code. It runs against any OpenAI-compatible model,
-  ships as a Docker image, needs two secrets to deploy, and is also available
-  as a hosted bot. Readme in six languages.
+  A self-hostable Telegram bot that keeps a group clean and answers its members. Moderation, vision 
+  and chat behaviour are defined as iLang prompt specifications rather than prose. Version 1.1 adds 
+  convergence-only learning: every spam verdict of the language-model judge is distilled into a 
+  deduplicated, counted hard library that serves as a zero-cost deterministic fallback judge when the 
+  model is unavailable, is self-pruning, and is exported each release as an open spam corpus in iLang 
+  form; plus two deterministic join-time rules (name-is-spam rejection and first-message probe 
+  removal). Method note with cited literature in docs/METHOD.md. Readme in six languages.
 type: software
 authors:
   - given-names: "Long Quan"
@@ -17,10 +18,14 @@ authors:
 repository-code: "https://github.com/ilang-ai/TelegramGuard"
 url: "https://github.com/ilang-ai/TelegramGuard"
 license: MIT
-version: "1.0.1"
-date-released: "2026-09-21"
+version: "1.1.0"
+date-released: "2026-11-23"
 keywords:
   - Telegram
+  - self-learning
+  - spam corpus
+  - convergence-only learning
+  - deterministic fallback
   - anti-spam
   - moderation bot
   - iLang
