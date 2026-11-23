@@ -13,6 +13,9 @@ AI_VISION_MODELS = os.environ.get(
 )
 AI_AUDIO_MODEL = os.environ.get("AI_AUDIO_MODEL", "Qwen/Qwen3-Omni-30B-A3B-Instruct")
 AI_IMAGE_MAX_WIDTH = int(os.environ.get("AI_IMAGE_MAX_WIDTH", "600"))
+# DeepSeek V4.1 "deepseek-flash" thinks by default; the judge uses max_tokens=32,
+# so reasoning tokens would eat the whole budget. Set 1 to send thinking.type=disabled.
+AI_DISABLE_THINKING = os.environ.get("AI_DISABLE_THINKING", "0") == "1"
 
 # Optional second AI provider, tried only after every primary model failed.
 # Leave AI_FALLBACK_API_KEY empty and nothing changes: the chain stays exactly

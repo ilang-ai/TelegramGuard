@@ -141,12 +141,64 @@ def _image_part(image_bytes):
     return {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}}
 
 
+
+# ==================== Admin alert on repeated AI failure ====================
+# The SiliconFlow 402 (balance exhausted) ran unnoticed for 29 days: every call
+# failed, the judge silently fell back to the lexicon, nobody was told. Now when
+# the FIRST entry of a model chain fails ALERT_THRESHOLD times inside
+# ALERT_WINDOW seconds, ADMIN_USER_ID gets a Telegram message, at most once per
+# ALERT_COOLDOWN. bot.py installs the sink; without one this is a no-op.
+import asyncio as _asyncio
+import time as _time
+
+ALERT_WINDOW = 600
+ALERT_THRESHOLD = 10
+ALERT_COOLDOWN = 3600
+_alert_sink = None
+_primary_fail_times = []
+_last_alert = 0.0
+
+
+def set_alert_sink(fn):
+    """fn: async callable(text). bot.py wires it to bot.send_message(ADMIN_USER_ID)."""
+    global _alert_sink
+    _alert_sink = fn
+
+
+async def _deliver_alert(text):
+    try:
+        await _alert_sink(text)
+    except Exception as e:
+        logger.warning("[AI] alert delivery failed: %s", e)
+
+
+def _note_primary_failure(provider, model, err, fallback_ok):
+    global _last_alert
+    now = _time.time()
+    _primary_fail_times.append(now)
+    del _primary_fail_times[:-1000]
+    recent = sum(1 for t in _primary_fail_times if now - t <= ALERT_WINDOW)
+    if recent < ALERT_THRESHOLD or now - _last_alert < ALERT_COOLDOWN or _alert_sink is None:
+        return
+    _last_alert = now
+    text = ("⚠️ AI 主力连续失败：10 分钟内 %d 次\n供应商=%s 模型=%s\n兜底：%s\n最近错误：%s"
+            % (recent, provider, model,
+               "在扛（判定仍正常）" if fallback_ok else "也失败或没配 → 已退回词库",
+               str(err)[:300]))
+    try:
+        _asyncio.get_running_loop().create_task(_deliver_alert(text))
+    except RuntimeError:
+        logger.warning("[AI] alert skipped (no running loop): %s", text)
+
+
 async def _chat(models, messages, max_tokens, temperature):
     if isinstance(models, str):
         models = [models]
     last_err = None
-    for entry in models:
+    primary_err = None  # (provider, model, err) when the first chain entry failed
+    for i, entry in enumerate(models):
         # entry is "model" (primary provider) or (FALLBACK, "model")
+        which, m = "?", str(entry)
         try:
             if isinstance(entry, (tuple, list)):
                 which, m = entry[0], entry[1]
@@ -156,18 +208,28 @@ async def _chat(models, messages, max_tokens, temperature):
         except Exception as e:
             last_err = e
             logger.warning("[AI] entry %r unusable: %s, skipping", entry, e)
+            if i == 0:
+                primary_err = (which, m, e)
             continue
         try:
+            extra = {"thinking": {"type": "disabled"}} if getattr(config, "AI_DISABLE_THINKING", False) else None
             resp = await client.chat.completions.create(
-                model=m, messages=messages, max_tokens=max_tokens, temperature=temperature
+                model=m, messages=messages, max_tokens=max_tokens, temperature=temperature,
+                extra_body=extra,
             )
             txt = (resp.choices[0].message.content or "").strip()
             if txt:
+                if primary_err is not None:
+                    _note_primary_failure(primary_err[0], primary_err[1], primary_err[2], fallback_ok=True)
                 return txt
             last_err = AIError("empty response")
         except Exception as e:
             last_err = e
             logger.warning("[AI] provider=%s model=%s failed: %s", which, m, e)
+        if i == 0 and primary_err is None:
+            primary_err = (which, m, last_err)
+    if primary_err is not None:
+        _note_primary_failure(primary_err[0], primary_err[1], primary_err[2], fallback_ok=False)
     raise AIError("all models failed: " + str(last_err))
 
 

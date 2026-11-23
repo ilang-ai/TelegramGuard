@@ -27,3 +27,19 @@ class SharedDB:
 
 def shared_db():
     return SharedDB()
+
+
+async def close_db():
+    """Close the shared connection on shutdown.
+
+    aiosqlite runs each connection on a NON-daemon worker thread. Left open, the
+    interpreter cannot exit after Application.stop(): the process sat there until
+    systemd SIGKILLed it at TimeoutStopSec (90 s) on every single restart.
+    """
+    global _db
+    if _db is not None:
+        try:
+            await _db.close()
+        except Exception:
+            pass
+        _db = None

@@ -875,13 +875,27 @@ def start_health_server():
 
 # ==================== Main ====================
 
+from modules import ai_provider
+
+async def _post_shutdown(app):
+    # Runs after Application.shutdown(): release the aiosqlite worker thread so
+    # the interpreter can actually exit instead of hanging until SIGKILL.
+    from modules.db import close_db
+    await close_db()
+
+
 def main():
     # Ensure data directory exists
     db_dir = os.path.dirname(config.DB_PATH)
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
 
-    app = Application.builder().token(config.BOT_TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).pool_timeout(30).build()
+    app = Application.builder().token(config.BOT_TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).pool_timeout(30).post_shutdown(_post_shutdown).build()
+    # Repeated AI failures -> Telegram message to the super-admin (see ai_provider).
+    if getattr(config, "ADMIN_USER_ID", None):
+        async def _alert_sink(text):
+            await app.bot.send_message(config.ADMIN_USER_ID, text)
+        ai_provider.set_alert_sink(_alert_sink)
 
     async def _on_error(update, context):
         # There was no error handler at all, so an exception inside a handler
