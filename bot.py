@@ -121,14 +121,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # and it silently re-opened on every deploy. Set ADMIN_USER_ID explicitly;
     # unset means the super-admin commands are unavailable to everyone.
     if update.effective_chat.type == "private":
-        context.user_data["history"] = []
-        intent, reply = await ai_text(
-            "/start",
-            history=None,
-            context_info="NEW_SESSION:User just opened chat, greet briefly, say what you can do"
-        )
-        await update.message.reply_text(reply)
-        context.user_data.setdefault("history", []).append({"role": "assistant", "text": reply})
+        await _dm_autoreply(update, context, force=True)
     else:
         chat_id = update.effective_chat.id
         await register_group(chat_id, update.effective_chat.title)
@@ -148,11 +141,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == "private":
-        await update.message.reply_text(
-            "Just talk to me, no commands needed\n\n"
-            "Group admin → Add me to a group, give me admin permissions\n"
-            "Anything else → Just chat"
-        )
+        await _dm_autoreply(update, context, force=True)
     else:
         if not await _group_cmd_allowed(update, context):
             return
@@ -696,51 +685,48 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # ==================== Private ====================
 
-async def handle_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.message
-    if not msg or not msg.text:
+# ==================== Private chat: fixed auto-reply, no AI ====================
+# 2026-11-23 机主：「私聊就自动回复 关注我们的 X 账号」。私聊不再进模型：没有成本面和滥用面，
+# 语音那条死路也不用修。群里 @ 它的回答不受影响（仍走 persona.ilang）。
+DM_AUTOREPLY = (
+    "我在群里工作，不私聊。\n"
+    "把我拉进群、给管理员权限，我自动清广告。\n\n"
+    "关注我们的 X：https://x.com/ai_chuhai\n\n"
+    "I work inside groups, not in DMs. Add me to a group with admin rights and I clean spam automatically.\n"
+    "Follow us on X: https://x.com/ai_chuhai"
+)
+
+
+async def _dm_autoreply(update, context, force=False):
+    """同一个人 30 秒内只回一次（防止一口气贴 50 条换来 50 条回复）；/start /help 强制回。"""
+    import time as _t
+    now = _t.time()
+    if not force and now - context.user_data.get("dm_autoreply_at", 0) < 30:
         return
-    user_id = msg.from_user.id
-    history = context.user_data.setdefault("history", [])
-    history.append({"role": "user", "text": msg.text})
-    intent, reply = await ai_text(msg.text, history, _ctx_info(context))
-    await _handle_ai_result(intent, reply, msg, user_id, context)
+    context.user_data["dm_autoreply_at"] = now
+    msg = update.message
+    if not msg:
+        return
+    try:
+        await msg.reply_text(DM_AUTOREPLY)
+    except Exception as e:
+        logger.warning("dm autoreply failed: %s", e)
+
+
+async def handle_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _dm_autoreply(update, context)
 
 
 async def handle_private_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.message
-    if not msg or not msg.photo:
-        return
-    user_id = msg.from_user.id
-    history = context.user_data.setdefault("history", [])
-    caption = msg.caption or ""
-    history.append({"role": "user", "text": "[photo] " + caption if caption else "[photo]"})
-    try:
-        file = await context.bot.get_file(msg.photo[-1].file_id)
-        img_bytes = bytes(await file.download_as_bytearray())
-    except Exception:
-        await msg.reply_text("Didn't receive that image. Try again?")
-        return
-    intent, reply = await ai_vision(img_bytes, caption, history, _ctx_info(context))
-    await _handle_ai_result(intent, reply, msg, user_id, context)
+    await _dm_autoreply(update, context)
 
 
 async def handle_private_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.message
-    if not msg or not msg.voice:
-        return
-    user_id = msg.from_user.id
-    history = context.user_data.setdefault("history", [])
-    history.append({"role": "user", "text": "[voice]"})
-    try:
-        file = await context.bot.get_file(msg.voice.file_id)
-        audio_bytes = bytes(await file.download_as_bytearray())
-        mime = msg.voice.mime_type or "audio/ogg"
-    except Exception:
-        await msg.reply_text("Didn't catch that voice message. Try again or just type it out.")
-        return
-    intent, reply = await ai_voice(audio_bytes, mime, history, _ctx_info(context))
-    await _handle_ai_result(intent, reply, msg, user_id, context)
+    await _dm_autoreply(update, context)
+
+
+async def handle_private_other(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await _dm_autoreply(update, context)
 
 
 # ==================== Events ====================
@@ -1041,6 +1027,9 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND & filters.UpdateType.MESSAGE, handle_private_text))
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE, handle_private_photo))
     app.add_handler(MessageHandler(filters.VOICE & filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE, handle_private_voice))
+    # 其他类型的私聊（贴纸、文件、视频…）也回同一句
+    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE & ~filters.COMMAND
+                                   & ~filters.TEXT & ~filters.PHOTO & ~filters.VOICE, handle_private_other))
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
