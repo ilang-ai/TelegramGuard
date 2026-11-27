@@ -219,8 +219,31 @@ async def _ban_actor(context, chat_id, sender_chat, user_id):
     return await context.bot.ban_chat_member(chat_id, user_id)
 
 
+def _benign_delete_error(e, ban_ok):
+    """删除失败但不是权限问题：消息已经没了。
+
+    超级群里封人会连带删光这个人的全部消息，所以封禁成功后再删会扑空
+    （"Message to delete not found" / "Message can't be deleted"）。2026-11-27 以前删和封并行发，
+    封禁先落地时这里扑空，代码当成没权限，在群里假报「我没权限」。
+    """
+    if type(e).__name__ != "BadRequest":
+        return False
+    s = str(e).lower()
+    if "message to delete not found" in s or "message not found" in s or "message_id_invalid" in s:
+        return True
+    return bool(ban_ok) and "can't be deleted" in s
+
+
 async def _remind_no_permission(msg, context, chat_id):
     """Tell admins we found spam but cannot act on it. Once per chat per hour."""
+    # 2026-11-27：只有真查到没权限才提醒。以前「删除扑空」也会走到这里，在群里假报没权限。
+    try:
+        _rights = await onboarding.probe_rights(context, chat_id)
+    except Exception:
+        _rights = None
+    if _rights is not False:
+        logger.info("no-permission reminder skipped: chat=%s rights=%s", chat_id, _rights)
+        return
     last = context.bot_data.get("perm_remind_" + str(chat_id), 0)
     if _time.time() - last <= 3600:
         return
@@ -642,24 +665,24 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if spam:
         try:
-            tasks = []
-            for entry in user_msgs.get(uid, []):
-                mid = entry[0] if isinstance(entry, tuple) else entry
-                tasks.append(context.bot.delete_message(chat_id, mid))
-            n_del = len(tasks)
-            tasks.append(_ban_actor(context, chat_id, sender_chat, user.id))
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            # gather(return_exceptions=True) never raises: a permission error
-            # (Forbidden) or a rate limit (RetryAfter) comes back as a VALUE in
-            # results. The old code threw the results away, so a bot without the
-            # rights logged "SPAM nuked" while the ad sat untouched in the group
-            # and the reminder branch below was unreachable dead code.
-            deleted_ok = sum(1 for r in results[:n_del]
-                             if not isinstance(r, Exception) and r is not False)
-            ban_ok = not isinstance(results[n_del], Exception)
-            errs = [r for r in results if isinstance(r, Exception)]
+            # Ban first, then delete (2026-11-27). Sent in parallel, the ban often landed first;
+            # in a supergroup a ban revokes all of the user's messages, so the delete came back
+            # "Message to delete not found" / "can't be deleted" and was mistaken for missing rights.
+            mids = [(e[0] if isinstance(e, tuple) else e) for e in user_msgs.get(uid, [])]
+            n_del = len(mids)
+            ban_ok, ban_err = True, None
+            try:
+                await _ban_actor(context, chat_id, sender_chat, user.id)
+            except Exception as e:
+                ban_ok, ban_err = False, e
+            del_results = (await asyncio.gather(*[context.bot.delete_message(chat_id, m) for m in mids],
+                                                return_exceptions=True)) if mids else []
+            deleted_ok = sum(1 for r in del_results if not isinstance(r, Exception) and r is not False)
+            errs = [r for r in del_results if isinstance(r, Exception) and not _benign_delete_error(r, ban_ok)]
+            if ban_err is not None:
+                errs.append(ban_err)
             user_msgs.pop(uid, None)
-            if errs and (deleted_ok == 0 or not ban_ok):
+            if errs:
                 logger.warning(
                     "SPAM action PARTIAL/FAILED: user=" + str(uid) + " chat=" + str(chat_id) +
                     " deleted=" + str(deleted_ok) + "/" + str(n_del) + " ban_ok=" + str(ban_ok) +
